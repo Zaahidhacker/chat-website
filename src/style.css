@@ -14,3 +14,5 @@
 .sidebar-close{display:none}@media(max-width:700px){.sidebar-close{display:inline-flex;position:absolute;top:78px;right:12px}}
 .sidebar .brand small{font-size:11px}@media(max-width:700px){.demo-banner{padding-inline:16px}}
 .sidebar{overflow-y:auto;overscroll-behavior:contain}
+
+.message-link{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px;overflow-wrap:anywhere}.message-link:hover{color:var(--accent)}

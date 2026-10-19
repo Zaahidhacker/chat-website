@@ -87,3 +87,7 @@ See [PHOTO-GARDEN.md](PHOTO-GARDEN.md) for official free-tier research, capacity
 ## Our Secret Island
 
 Open **Our secret island** from navigation for a three-chapter illustrated adventure: six locations, twelve story challenges across four playable games, daily variations, eight hidden curiosities, personal badges, a shared cottage with fourteen decorations and optional sealed surprise notes. The original Moon Garden and Pip’s progress stay intact. Games run locally between meaningful saves; hidden games pause and no island polling runs. See [SECRET-ISLAND.md](SECRET-ISLAND.md) for gameplay, server permissions, save/retry behavior, data preservation, test boundaries and rollback.
+
+## Clickable web links
+
+Existing and new message bodies, photo captions, Keepsakes and search results automatically render HTTP/HTTPS URLs, `www` addresses and bare domains such as `example.com` as links. Bare domains use HTTPS; links open separately with `noopener noreferrer`. Link rendering escapes message HTML, excludes email/unsupported-scheme fragments, preserves surrounding punctuation and performs no preview downloads. Stored message text and all database records stay unchanged. `npm run test:links` verifies old/new messages in two isolated browsers and native phone taps to a controlled external destination.

@@ -75,3 +75,7 @@ Physical Android/iPhone delivery, closed-app push arrival through each vendor, S
 - Security advisors: new private tables intentionally have RLS with no client policies or table grants. New exposed RPCs are invokers and call membership-checked private implementations. The reported new placement foreign-key index was added; older unrelated advisor findings were left outside this upgrade. Production dependency audit reports zero vulnerabilities.
 - The photo regression suite caught and verified the correction of a lazy-style define mismatch. The phone layout suite caught and verified anchored press transforms for positioned island/constellation targets. These fixes are in the final build.
 - `SECRET-ISLAND.md` records architecture, free-tier boundaries, local pending-action behavior and the previous deployment/commit rollback path. Live browser traffic to production Supabase remains blocked by runtime policy; browser integrations use a labeled controlled transport. Actual SQL permissions and production static assets are checked through native connectors.
+
+## Clickable message links — 19 October 2026
+
+Six link/security unit cases and five two-browser link scenarios pass: old TikTok messages, new bare domains, sender/recipient rendering, phone taps opening a separate page without an opener/referrer, inert HTML, preserved source text and saved-message links. The complete unit suite has 31 tests. No database migration or stored-message rewrite is involved. No automatic URL previews or third-party requests occur when rendering links.

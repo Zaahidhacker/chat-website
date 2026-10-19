@@ -10,7 +10,8 @@
     "test:browser": "node tests/browser.mjs",
     "test:upgrades": "node tests/upgrades.mjs",
     "test:features": "node tests/photos-garden.mjs",
-    "test:island": "node tests/island-browser.mjs"
+    "test:island": "node tests/island-browser.mjs",
+    "test:links": "node tests/links-browser.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",
