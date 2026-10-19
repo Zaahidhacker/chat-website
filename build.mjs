@@ -4,10 +4,10 @@ import {createHash} from 'node:crypto';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 await rm('dist',{recursive:true,force:true});await mkdir('dist/assets',{recursive:true});
 const featureDefines={};
-for(const name of ['photos','garden']){
+for(const name of ['photos','garden','island']){
  const css=(await transform(await readFile(`src/${name}.css`,'utf8'),{loader:'css',minify:true})).code;
  const hash=createHash('sha256').update(css).digest('hex').slice(0,12),url=`/assets/${name}-${hash}.css`;
- await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':'GARDEN_STYLE_URL']=JSON.stringify(url);
+ await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':name.toUpperCase()+'_STYLE_URL']=JSON.stringify(url);
 }
 const worker=await build({entryPoints:['src/photo-worker.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2020'});
 const workerBytes=worker.outputFiles[0].contents,workerHash=createHash('sha256').update(workerBytes).digest('hex').slice(0,12);

@@ -14,6 +14,7 @@ npx playwright install --with-deps chromium
 npm run test:browser
 npm run test:upgrades
 npm run test:features
+npm run test:island
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -82,3 +83,7 @@ The composer’s photo button offers gallery selection and native camera capture
 Only the additive migrations `010_private_photos.sql` and `011_shared_garden.sql` were applied for this upgrade. They add separate tables, buckets and membership-checked functions. They do not alter, rewrite or recreate existing conversations or accounts. The verified private backup and comparison SQL remain excluded from source and deployment. **Do not reset this production database.**
 
 See [PHOTO-GARDEN.md](PHOTO-GARDEN.md) for official free-tier research, capacity limits, privacy details and verification boundaries.
+
+## Our Secret Island
+
+Open **Our secret island** from navigation for a three-chapter illustrated adventure: six locations, twelve story challenges across four playable games, daily variations, eight hidden curiosities, personal badges, a shared cottage with fourteen decorations and optional sealed surprise notes. The original Moon Garden and Pip’s progress stay intact. Games run locally between meaningful saves; hidden games pause and no island polling runs. See [SECRET-ISLAND.md](SECRET-ISLAND.md) for gameplay, server permissions, save/retry behavior, data preservation, test boundaries and rollback.
