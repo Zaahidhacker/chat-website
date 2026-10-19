@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {visibleMessages,mergeMessages,receiptLabel} from '../src/logic.js';
+const msg=(id,seq,extra={})=>({id,seq,created_at:'2026-01-01T00:00:00Z',...extra});
+test('clearing one account does not mutate shared messages or the other view',()=>{const shared=[msg('a',1),msg('b',2),msg('c',3)];assert.deepEqual(visibleMessages(shared,2).map(x=>x.id),['c']);assert.equal(visibleMessages(shared,0).length,3);assert.equal(shared.length,3)});
+test('realtime echo and retry response replace optimistic message once',()=>{const merged=mergeMessages([msg('a',99,{pending:true})],[msg('a',5),msg('b',6)]);assert.equal(merged.length,2);assert.equal(merged[0].seq,5);assert.equal(merged[0].pending,false)});
+test('receipts distinguish pending failed sent delivered and read',()=>{const m=msg('a',3);assert.equal(receiptLabel({...m,pending:true},{}),'Sending');assert.equal(receiptLabel({...m,failed:true},{last_read:9}),'Failed');assert.equal(receiptLabel(m,{}),'Sent');assert.equal(receiptLabel(m,{last_delivered:3}),'Delivered');assert.equal(receiptLabel(m,{last_read:3}),'Read')});

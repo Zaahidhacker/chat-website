@@ -1,0 +1,3 @@
+export function visibleMessages(messages,cutoff){return messages.filter(m=>(m.seq>cutoff||m.pending||m.failed)&&!m.hidden).sort((a,b)=>a.seq-b.seq||a.created_at.localeCompare(b.created_at)||a.id.localeCompare(b.id))}
+export function mergeMessages(previous,incoming){const map=new Map(previous.map(m=>[m.id,m]));for(const m of incoming)map.set(m.id,{...map.get(m.id),...m,pending:false,failed:false});return [...map.values()].sort((a,b)=>a.seq-b.seq||a.created_at.localeCompare(b.created_at))}
+export function receiptLabel(m,partner){if(m.failed)return 'Failed';if(m.pending)return 'Sending';if((partner?.last_read||0)>=m.seq)return 'Read';if((partner?.last_delivered||0)>=m.seq)return 'Delivered';return 'Sent'}
