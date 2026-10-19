@@ -51,3 +51,15 @@ The before design inspector reported five failures, including wrapping headlines
 The user independently confirmed real enrollment and two-way messaging. This workspace still blocks direct automated browser access to the live Supabase and Vercel origins, so the browser integration transport remains a fixture. Native Vercel tools verify production HTML/assets and deployment status separately.
 
 Physical Android/iPhone delivery, closed-app push arrival through each vendor, Safari touch behavior, real-device battery use and the exact cause of the earlier intermittent “Failed to fetch” cannot be fully verified here. Push permission must be enabled on each device. Free-tier cold starts, browser storage clearing, provider limits and network outages remain outside the app's control. No fixed delivery time or zero-lag guarantee is made.
+
+## Photo and garden upgrade — 19 October 2026
+
+- **19 unit tests**, **18 messaging browser scenarios**, **9 upgrade scenarios** and **16 photo/garden scenarios** passed on the final build. No browser page errors. Production dependency audit: zero reported vulnerabilities.
+- Real Supabase rollback tests passed for reservation size/quota/ownership, unpublished-photo privacy, Storage policies, idempotent commit, recipient visibility, hiding, outsider/anonymous denial, fixed daily rewards and sealed answers. These Storage fixtures are metadata only, not actual uploaded bytes.
+- A fresh verified private backup captured **35 existing messages and two account identities** before the additive migrations. A later live full-row JSON comparison found **35 present and 35 exactly unchanged**. No original message was removed, restored or rewritten.
+- Initial JS + CSS is **23.2 KiB gzip**, under the existing 25 KB budget. Game/photo features and styles load separately. Received full photos load only when opened; downloading reuses the same received Blob.
+- Synthetic 2400×1800 PNG test: 265,670 input bytes → 208,335-byte full JPEG at 1024×768 plus 25,111-byte thumbnail. Compression varies by image; the UI shows the actual size before sending.
+- Final controlled 6× CPU phone optimistic message paint: **291 ms**. Cold login at 1.6 Mbps and 150 ms latency: **1928 ms**, about **71.9 KB encoded resource bodies** including fonts. These are controlled fixture measurements, not internet delivery guarantees.
+- Game/photo layouts passed at 320, 360, 390, 768 and 1440 px in light/dark themes; a game-card interaction also passed under 6× CPU throttling. Hidden garden activity pauses and no constant game requests occur.
+- A reconnect event arriving during an existing sync now queues one follow-up sync, so refreshed personal-hide metadata is not lost during that overlap. The original reply-privacy regression test passes.
+- Official free-tier findings, conservative capacity caps and live-device verification limits are documented in `PHOTO-GARDEN.md`.

@@ -3,7 +3,16 @@ import {readFile,writeFile,copyFile,mkdir,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 await rm('dist',{recursive:true,force:true});await mkdir('dist/assets',{recursive:true});
-const result=await build({entryPoints:['src/app.js'],bundle:true,minify:true,splitting:true,format:'esm',outdir:'dist/assets',entryNames:'[name]-[hash]',chunkNames:'[name]-[hash]',target:['es2020'],metafile:true,legalComments:'none'});
+const featureDefines={};
+for(const name of ['photos','garden']){
+ const css=(await transform(await readFile(`src/${name}.css`,'utf8'),{loader:'css',minify:true})).code;
+ const hash=createHash('sha256').update(css).digest('hex').slice(0,12),url=`/assets/${name}-${hash}.css`;
+ await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':'GARDEN_STYLE_URL']=JSON.stringify(url);
+}
+const worker=await build({entryPoints:['src/photo-worker.js'],bundle:true,minify:true,format:'esm',write:false,target:'es2020'});
+const workerBytes=worker.outputFiles[0].contents,workerHash=createHash('sha256').update(workerBytes).digest('hex').slice(0,12);
+const workerURL=`/assets/photo-worker-${workerHash}.js`;await writeFile('dist'+workerURL,workerBytes);
+const result=await build({entryPoints:['src/app.js'],bundle:true,minify:true,splitting:true,format:'esm',outdir:'dist/assets',entryNames:'[name]-[hash]',chunkNames:'[name]-[hash]',target:['es2020'],metafile:true,legalComments:'none',define:{...featureDefines,PHOTO_WORKER_URL:JSON.stringify(workerURL)}});
 const entry=Object.entries(result.metafile.outputs).find(([,v])=>v.entryPoint==='src/app.js')[0].replace(/^dist/,'');
 let cssSource=await readFile('src/style.css','utf8');
 for(const [name,file]of [['manrope','node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2'],['cormorant','node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2']]){

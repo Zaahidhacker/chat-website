@@ -1,6 +1,6 @@
 # Our Little Universe
 
-A private, text-first chat for Zaahid and Layaana. Built with vanilla JavaScript, a lazy-loaded Supabase client, Supabase Auth and Postgres row-level security. The production host is Vercel, with source in `Zaahidhacker/chat-website`.
+A private chat with photo sharing and a shared moon garden for Zaahid and Layaana. Built with vanilla JavaScript, a lazy-loaded Supabase client, Supabase Auth and Postgres row-level security. The production host is Vercel, with source in `Zaahidhacker/chat-website`.
 
 ## Develop and verify
 
@@ -13,6 +13,7 @@ npm start
 npx playwright install --with-deps chromium
 npm run test:browser
 npm run test:upgrades
+npm run test:features
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -25,8 +26,8 @@ The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets h
 - Keyed message elements: unchanged bubbles stay in place; presence, typing and read receipts update separately.
 - Coalesced receipt requests, no unchanged database receipt writes, and one visible-tab presence heartbeat every 30 seconds.
 - After 30 seconds in the background, the socket closes. Returning reconnects and fetches changes. If realtime is unavailable, the visible tab checks for changes every 30 seconds.
-- Drafts and failed sends survive reload within the same tab. Closing a tab may discard them. Sign-out clears private in-memory state and session outboxes.
-- Self-hosted Latin Manrope and Cormorant fonts, with content hashes and persistent public-asset caching. No third-party font requests, analytics, autoplay or media sharing. The fonts add about 48 KB on a cold visit, then are cached.
+- Drafts and failed sends survive reload within the same tab. Closing a tab may discard them. Compressed unsent photos use a separate, account-scoped IndexedDB outbox capped at 8 MiB. Sign-out clears private in-memory state and both outboxes.
+- Self-hosted Latin Manrope and Cormorant fonts, with content hashes and persistent public-asset caching. No third-party font requests, analytics or autoplay. The fonts add about 48 KB on a cold visit, then are cached.
 - Touch swipe right to reply, with vertical-scroll arbitration and an accessible menu alternative. Original reply context is fetched only when missing, subject to message RLS.
 - Browser sessions persist through normal visits and token refresh. Temporary conversation fetch failures offer reconnect without deleting the stored session. Private/incognito mode, revoked sessions, cleared browser storage and provider outages still apply.
 
@@ -71,3 +72,13 @@ The function `universe-push` authenticates the database webhook with a randomly 
 The service worker receives only recipient/message IDs, displays **“You have a new message.”**, verifies the active account, suppresses notifications for a focused open chat, and handles clicks by focusing or opening the app. Sign-out clears its account association and closes visible notifications. Service worker storage contains no conversation bodies or login credentials. Push is best effort: provider/network failures are logged without private data, expired endpoints are removed, duplicate webhook calls are claimed once per device, and a failed notification never rolls back a message. There is no durable retry scheduler for failed provider deliveries.
 
 Before this upgrade a private workspace backup of existing conversations and account identities was saved and verified with the owner's explicit approval. All 28 baseline message records were compared against the database and were exactly unchanged after the additive migration. The backup, generated signing keys and private comparison SQL stay in ignored `work/`; none is committed or deployed.
+
+## Photos and our moon garden
+
+The composer’s photo button offers gallery selection and native camera capture where supported. Photos are decoded and re-encoded on the device, with a 1600-pixel maximum edge, a 512 KiB full-image ceiling and a 32 KiB thumbnail ceiling. A preview and optional caption appear before any upload. Uploads go directly to two private Supabase buckets with progress and stable-ID retries. Conversation thumbnails load near the viewport; full images load only on opening the viewer. The viewer supports zoom, scrolling/panning, native pinch zoom and JPEG download. Original EXIF metadata is removed; HEIC/AVIF decoding depends on browser support. Unsupported formats receive an actionable error.
+
+**Our moon garden** is a separate navigation item: care for Pip the bunny, water the shared garden, answer a sealed daily question, match moon pairs and solve a daily symbol code. Shared points unlock flowers, a lantern, Pip’s crown and a wishing pond. Rewards are limited to once per activity per person per day by the server. Puzzles use an honor system; they are not competitive anti-cheat games. Game state loads on entry, explicit refresh and actions, with no game polling. Optional sound is generated locally and starts off. Hidden or unmounted game activity pauses.
+
+Only the additive migrations `010_private_photos.sql` and `011_shared_garden.sql` were applied for this upgrade. They add separate tables, buckets and membership-checked functions. They do not alter, rewrite or recreate existing conversations or accounts. The verified private backup and comparison SQL remain excluded from source and deployment. **Do not reset this production database.**
+
+See [PHOTO-GARDEN.md](PHOTO-GARDEN.md) for official free-tier research, capacity limits, privacy details and verification boundaries.

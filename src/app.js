@@ -19,17 +19,32 @@ function ensureClient(){
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const paths = { heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z", chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6A8.5 8.5 0 1 1 21 11.5Z", bookmark: "M6 3h12v19l-6-4-6 4V3Z", spark: "m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6L12 2Z", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.5 4 1.5-1-2-3-1.7.5L17 7l-.2-2H7.2L7 7 5.7 8.5 4 8l-2 3 1.5 1L3 14l-1 1 2 3 2-.5L8 19l.2 2h7.6l.2-2 2-1.5 2 .5 2-3-1-1-.5-2Z", lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4m-3 5v2", moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z", sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5", arrow: "M5 12h14m-6-6 6 6-6 6", send: "m22 2-7 20-4-9L2 9l20-7ZM11 13 22 2", smile: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 14s1 3 4 3 4-3 4-3M8 9h.01M16 9h.01", more: "M5 12h.01M12 12h.01M19 12h.01", search: "M20 20l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z", close: "m6 6 12 12M6 18 18 6", logout: "M9 4H4v16h5m5-13 5 5-5 5M8 12h11", reply: "m9 5-7 7 7 7M2 12h12c4 0 6 2 6 7", trash: "M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7", check: "m4 12 5 5L20 6", menu: "M4 6h16M4 12h16M4 18h16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z", down: "m6 9 6 6 6-6", note: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h3" };
+const paths = { photo:"M4 4h16v16H4V4Zm0 12 5-5 4 4 3-3 4 4M15 8h.01", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z", chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6A8.5 8.5 0 1 1 21 11.5Z", bookmark: "M6 3h12v19l-6-4-6 4V3Z", spark: "m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6L12 2Z", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.5 4 1.5-1-2-3-1.7.5L17 7l-.2-2H7.2L7 7 5.7 8.5 4 8l-2 3 1.5 1L3 14l-1 1 2 3 2-.5L8 19l.2 2h7.6l.2-2 2-1.5 2 .5 2-3-1-1-.5-2Z", lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4m-3 5v2", moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z", sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5", arrow: "M5 12h14m-6-6 6 6-6 6", send: "m22 2-7 20-4-9L2 9l20-7ZM11 13 22 2", smile: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 14s1 3 4 3 4-3 4-3M8 9h.01M16 9h.01", more: "M5 12h.01M12 12h.01M19 12h.01", search: "M20 20l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z", close: "m6 6 12 12M6 18 18 6", logout: "M9 4H4v16h5m5-13 5 5-5 5M8 12h11", reply: "m9 5-7 7 7 7M2 12h12c4 0 6 2 6 7", trash: "M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7", check: "m4 12 5 5L20 6", menu: "M4 6h16M4 12h16M4 18h16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z", down: "m6 9 6 6 6-6", note: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h3" };
 const icon = (n) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n] || paths.heart}"/></svg>`;
 const ib = (n, title, action2, cl = "") => `<button type="button" class="icon-btn ${cl}" aria-label="${title}" title="${title}" data-action="${action2}">${icon(n)}</button>`;
 const logo = () => `<div class="logo">${icon("heart")}</div>`;
 let S = { user: null, me: null, partner: null, messages: [], favorites: /* @__PURE__ */ new Set(), reactions: [], cutoff: 0, page: "chat", demo: false, reply: null, edit: null, loading: false, hasMore: true, connected: false };
 function savedTheme(){try{return localStorage.getItem("universe-theme")||"dark"}catch{return "dark"}}
-let theme = savedTheme(), channel, pulse, typingTimer, lastTyped = 0, toastTimer, inviteMode = false, loadingOlder = false, refreshing = false;
+let theme = savedTheme(), channel, pulse, typingTimer, lastTyped = 0, toastTimer, inviteMode = false, loadingOlder = false, refreshing = false, refreshQueued = false;
 let draft = "";
 let sessionEpoch=0,syncCursor=0,receiptScheduler=null,hiddenPause=null,stashTimer=null,renderFrame=null;
 let messageLookup=new Map(),reactionLookup=new Map(),autoScrollPending=false;
 let replyContext=new Map(), resumeSession=null;
+let photoAPI,garden,photoRecords=new Map();
+async function photos(){photoAPI=await import('./photos.js');photoAPI.configure(db,S.user?.id);return photoAPI}
+async function loadPhotos(messages,epoch=sessionEpoch){
+ if(!messages.length||S.demo)return;
+ const {data,error}=await db.from('universe_photos').select('*').in('id',messages.map(m=>m.id));
+ if(epoch!==sessionEpoch||error)return;
+ for(const p of data)photoRecords.set(p.id,p);
+ if(data.length)await photos();
+}
+function observePhotos(){if(photoAPI&&S.page==='chat')photoAPI.observe($('#messages'),id=>photoRecords.get(id))}
+function photoHTML(m){
+ if(m.deleted||(!photoRecords.has(m.id)&&!m.photoPending))return '';
+ const p=photoRecords.get(m.id),caption=m.body.startsWith('📷 ')?m.body.slice(3):m.body;
+ return `<button class="photo-frame" data-action="photo-view-${esc(m.id)}" aria-label="Open photo" style="aspect-ratio:${p?.width||4}/${p?.height||3}"><img data-photo-id="${esc(m.id)}" alt="Shared photo" decoding="async"><span class="photo-loading">${m.pending?'Sharing a little moment…':'Tap to open photo'}</span></button>${m.pending?`<div class="photo-upload"><progress max="100" value="${m.photoProgress||0}" aria-label="Photo upload progress"></progress><span>${m.photoProgress>=90?'Finishing…':(m.photoProgress||0)+'% uploaded'}</span></div>`:''}${caption&&caption!=='Photo'?`<span class="photo-caption">${esc(caption)}</span>`:''}`;
+}
 function setNotificationAccount(userId){navigator.serviceWorker?.ready.then(r=>r.active?.postMessage({type:'ACCOUNT',userId})).catch(()=>{})}
 function connectionScreen(error){
  $('#app').innerHTML=`<main class="reconnect"><div class="brand">${logo()}<strong>Our Little Universe</strong></div><h1>A moment to reconnect.</h1><p role="status">${esc(explainError(error))}</p><button class="primary" data-action="retry-session">Try again ${icon('arrow')}</button><button class="text-btn" data-action="logout">Sign out of this device</button></main>`;
@@ -62,6 +77,7 @@ function modal(html) {
   first?.focus();
 }
 function closeModal() {
+  photoAPI?.cancelPreview();
   $("#modal-root").innerHTML = "";
 }
 function time(t){return clockFormat.format(new Date(t))}
@@ -83,7 +99,8 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
- sessionEpoch++;refreshing=false;clearTimeout(stashTimer);stop();
+ garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
+ sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
  messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal();
@@ -140,7 +157,7 @@ function sample() {
 async function enter(session){
  if(!session){login();return}
  resumeSession=session;
- const epoch=++sessionEpoch;refreshing=false;stop();
+ const epoch=++sessionEpoch;refreshing=false;refreshQueued=false;stop();
  S.demo=false;S.user=session.user;S.loading=true;
  S.messages=[];S.keepsakes=[];S.reactions=[];S.older=false;S.newMessages=false;S.latestSeq=0;S.hidden=new Set();S.reply=S.edit=null;
  try{
@@ -150,7 +167,13 @@ async function enter(session){
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
   applyMetadata(state);syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
   await loadMessages();if(epoch!==sessionEpoch)return;
-  restoreOutbox();S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();setNotificationAccount(S.user.id);
+  restoreOutbox();
+  let pendingPhotos=false;try{pendingPhotos=!!localStorage.getItem('universe-photo-pending-'+S.user.id)}catch{}
+  if(pendingPhotos||S.messages.some(m=>m.photoPending)){
+   const api=await photos(),rows=await api.loadDrafts(S.user.id);if(epoch!==sessionEpoch)return;
+   for(const row of rows){if(!S.messages.some(m=>m.id===row.message.id))S.messages.push({...row.message,pending:false,failed:true,transmitting:false});photoRecords.set(row.message.id,{id:row.message.id,width:row.photo.width,height:row.photo.height});api.localThumb(row.message.id,row.photo.thumb)}
+  }
+  S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();setNotificationAccount(S.user.id);
  }catch(error){
   if(epoch!==sessionEpoch)return;
   S.loading=false;
@@ -183,6 +206,7 @@ async function loadMessages(before){
   const set=new Set(ids);S.reactions=S.reactions.filter(r=>!set.has(r.message_id)).concat(r.data);
  }
  await loadReplyContext(data,epoch);
+ await loadPhotos(data,epoch);
  receipt();
 }
 async function loadReplyContext(messages,epoch){
@@ -192,6 +216,7 @@ async function loadReplyContext(messages,epoch){
  const {data,error}=await db.from('universe_messages').select('*').in('id',ids);
  if(epoch!==sessionEpoch||error)return;
  for(const m of data)replyContext.set(m.id,m);
+ await loadPhotos(data,epoch);
  while(replyContext.size>WINDOW_SIZE)replyContext.delete(replyContext.keys().next().value);
 }
 function applyIncoming(messages){
@@ -214,7 +239,8 @@ async function showLatest(){
  updateMessages(true);scrollBottom();
 }
 async function refresh(){
- if(S.demo||!S.user||refreshing||document.hidden||!navigator.onLine)return;
+ if(S.demo||!S.user||document.hidden||!navigator.onLine)return;
+ if(refreshing){refreshQueued=true;return}
  refreshing=true;const epoch=sessionEpoch;
  try{
   const {data:state,error}=await db.rpc('universe_sync_state');if(epoch!==sessionEpoch)return;if(error)throw error;
@@ -227,6 +253,7 @@ async function refresh(){
    const {data,error:deltaError}=await db.from('universe_messages').select('*').gt('revision',syncCursor).lte('revision',target).order('revision',{ascending:true}).limit(100);
    if(epoch!==sessionEpoch)return;if(deltaError)throw deltaError;
    applyIncoming(data);
+   await loadPhotos(data.filter(m=>m.body.startsWith('📷 ')||photoRecords.has(m.id)),epoch);
    syncCursor=data.length?Math.max(syncCursor,...data.map(m=>m.revision)):target;
    if(data.length<100)syncCursor=target;
   }
@@ -235,7 +262,7 @@ async function refresh(){
   S.dataOnline=true;updateMessages();updateStatus();receipt();
  }catch{
   if(epoch===sessionEpoch){S.dataOnline=false;updateStatus()}
- }finally{if(epoch===sessionEpoch)refreshing=false}
+ }finally{if(epoch===sessionEpoch){refreshing=false;if(refreshQueued){refreshQueued=false;queueMicrotask(refresh)}}}
 }
 function startRealtime(){
  if(channel)return;
@@ -252,8 +279,12 @@ function startRealtime(){
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_messages'},payload=>{
   if(epoch!==sessionEpoch||!payload.new?.id)return;
   const near=nearBottom();applyIncoming([payload.new]);stash();updateMessages(near&&!S.older);receipt();
+  if(payload.new.body?.startsWith('📷 '))loadPhotos([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
   if(replyContext.has(payload.new.id))replyContext.set(payload.new.id,payload.new);
   if(payload.new.reply_to)loadReplyContext([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
+ })
+ .on('postgres_changes',{event:'*',schema:'public',table:'universe_photos'},p=>{
+  if(epoch!==sessionEpoch||!p.new?.id)return;photoRecords.set(p.new.id,p.new);photos().then(()=>{if(epoch===sessionEpoch)updateMessages()});
  })
  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'universe_members'},p=>{
   if(epoch!==sessionEpoch)return;
@@ -312,11 +343,15 @@ function receiptHTML(m){
  return `<span class="${status==='Read'?'ticks':''}" title="${status}">${status==='Read'||status==='Delivered'?'✓✓':status==='Sent'?'✓':status==='Sending'?'◷':''}</span>${m.failed?`<button class="text-btn" data-action="retry-${m.id}">Failed · retry</button>`:`<span class="sr-status">${status}</span>`}`;
 }
 function render() {
+  garden?.unmount();
   const active = (p) => S.page === p ? "active" : "";
-  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}${S.page === "chat" ? chatHTML() : S.page === "settings" ? settingsHTML() : S.page === "keepsakes" ? keepsakesHTML() : aboutHTML()}</main></div>`;
+  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><button class="nav ${active("garden")}" data-action="page-garden">${icon("sun")} Our moon garden</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : S.page === "garden" ? "Our moon garden" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}${S.page === "chat" ? chatHTML() : S.page === "settings" ? settingsHTML() : S.page === "keepsakes" ? keepsakesHTML() : S.page === "garden" ? '<section class="content-page" id="garden-root"><p role="status">Opening our garden…</p></section>' : aboutHTML()}</main></div>`;
   updateStatus();
+  if(S.page==='keepsakes'&&photoAPI)photoAPI.observe($('#keepsake-list'),id=>photoRecords.get(id));
+  if(S.page==='garden')import('./garden.js').then(module=>{if(S.page==='garden'&&S.user){garden=module;garden.mount($('#garden-root'),{db,user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}).catch(()=>{if($('#garden-root'))$('#garden-root').innerHTML='<p>Could not open the garden. Return to chat and try again.</p>'});
   if (S.page === "chat") {
     primeLog();
+    observePhotos();
     attachSwipeReply($('#messages'),id=>{const m=S.messages.find(m=>m.id===id);if(m&&!m.deleted)beginReply(m)});
     const ta = $("#message-input");
     ta.value = draft;
@@ -345,11 +380,11 @@ function render() {
   }
 }
 function chatHTML() {
-  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("smile", "Choose an emoji", "emoji")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea><button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
+  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("photo", "Share a photo", "attach-photo")}${ib("smile", "Choose an emoji", "emoji")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea><button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
 }
 function messageSignature(m){
  const reply=messageLookup.get(m.reply_to);
- return JSON.stringify([m.revision,m.body,m.deleted,m.edited_at,m.pending,m.failed,m.reply_to,reply?.body,reply?.deleted,S.favorites.has(m.id),receiptLabel(m,S.partner),reactionLookup.get(m.id)||[]]);
+ return JSON.stringify([m.revision,m.body,m.deleted,m.edited_at,m.pending,m.failed,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),receiptLabel(m,S.partner),reactionLookup.get(m.id)||[]]);
 }
 function logItems(){
  const all=visibleMessages(S.messages,S.cutoff),ms=S.older?all.slice(0,WINDOW_SIZE):all.slice(-WINDOW_SIZE);
@@ -374,7 +409,7 @@ function messageHTML(m) {
   const reply = messageLookup.get(m.reply_to);
   const reactions = reactionLookup.get(m.id)||[];
   let status = receiptLabel(m, S.partner);
-  return `<article class="message ${own ? "own" : ""}" data-message="${esc(m.id)}"><span class="swipe-hint" aria-hidden="true">${icon('reply')}</span><div class="avatar ${own ? "" : "pair"}">${esc((own ? S.me?.name : S.partner?.name)?.[0] || "\u2661")}</div><div class="message-main"><div class="bubble ${m.deleted ? "removed" : ""}">${m.reply_to ? `<div class="quote"><strong>${reply?esc(reply.sender===S.user.id?'You':S.partner?.name||'Your person'):'Reply'}</strong>${reply && !reply.deleted ? esc(reply.body.slice(0, 180)) : reply?.deleted?'This message was removed':'Earlier message'}</div>` : ""}${m.deleted ? "This message was removed" : esc(m.body)}</div>${reactions.map((r) => `<button class="reaction" data-action="react-${m.id}" aria-label="Reaction ${r.emoji}">${r.emoji}</button>`).join("")}<div class="message-meta">${S.favorites.has(m.id) ? icon("bookmark") : ""}<span>${time(m.created_at)}${m.edited_at && !m.deleted ? " \xB7 edited" : ""}</span>${own?`<span class="receipt" data-receipt="${m.id}" data-status="${status}">${receiptHTML(m)}</span>`:''}</div></div>${m.deleted ? "" : `<div class="message-actions">${ib("bookmark", S.favorites.has(m.id) ? "Unsave message" : "Save to keepsakes", `save-${m.id}`, "quick-save")}${ib("more", "Message actions", `message-${m.id}`)}</div>`}</article>`;
+  return `<article class="message ${own ? "own" : ""}" data-message="${esc(m.id)}"><span class="swipe-hint" aria-hidden="true">${icon('reply')}</span><div class="avatar ${own ? "" : "pair"}">${esc((own ? S.me?.name : S.partner?.name)?.[0] || "\u2661")}</div><div class="message-main"><div class="bubble ${m.deleted ? "removed" : ""}">${m.reply_to ? `<div class="quote"><strong>${reply?esc(reply.sender===S.user.id?'You':S.partner?.name||'Your person'):'Reply'}</strong>${reply && !reply.deleted ? (photoRecords.has(reply.id)?`<img class="quote-photo" data-photo-id="${esc(reply.id)}" alt="Photo in reply">`:"")+esc(reply.body.slice(0, 180)) : reply?.deleted?'This message was removed':'Earlier message'}</div>` : ""}${m.deleted ? "This message was removed" : (photoHTML(m)||esc(m.body))}</div>${reactions.map((r) => `<button class="reaction" data-action="react-${m.id}" aria-label="Reaction ${r.emoji}">${r.emoji}</button>`).join("")}<div class="message-meta">${S.favorites.has(m.id) ? icon("bookmark") : ""}<span>${time(m.created_at)}${m.edited_at && !m.deleted ? " \xB7 edited" : ""}</span>${own?`<span class="receipt" data-receipt="${m.id}" data-status="${status}">${receiptHTML(m)}</span>`:''}</div></div>${m.deleted ? "" : `<div class="message-actions">${ib("bookmark", S.favorites.has(m.id) ? "Unsave message" : "Save to keepsakes", `save-${m.id}`, "quick-save")}${ib("more", "Message actions", `message-${m.id}`)}</div>`}</article>`;
 }
 function nearBottom() {
   const el = $("#messages");
@@ -412,6 +447,7 @@ function updateMessages(force){
   if(near&&!S.older)scrollBottom();else el.scrollTop=top;
   if((S.newMessages||(!near&&!S.older))&&!$('#jump'))$('.main').insertAdjacentHTML('beforeend','<button class="jump" id="jump" data-action="bottom">Latest little moments ↓</button>');
   if(near&&!S.older)requestAnimationFrame(receipt);
+  observePhotos();
  });
 }
 function replyHTML() {
@@ -474,28 +510,37 @@ async function transmit(m) {
   const epoch=sessionEpoch;
   try {
     if(!navigator.onLine)throw Error("Offline");
+    if(m.photoPending){
+     const api=await photos(),row=(await api.loadDrafts(S.user.id)).find(r=>r.message.id===m.id);
+     if(!row)throw Error('This unsent photo is no longer on this device. Please select it again.');
+     const result=await api.send(m,row.photo,value=>{m.photoProgress=value;const el=document.querySelector(`[data-message="${m.id}"] .photo-upload`);if(el){el.querySelector('progress').value=value;el.querySelector('span').textContent=value>=90?'Finishing…':value+'% uploaded'}});
+     if(epoch!==sessionEpoch)return;
+     photoRecords.set(m.id,result.photo);applyIncoming([{...result.message,photoPending:false,transmitting:false}]);await api.removeDraft(S.user.id,m.id);if(!(await api.loadDrafts(S.user.id)).length){try{localStorage.removeItem('universe-photo-pending-'+S.user.id)}catch{}}stash();updateMessages(true);return;
+    }
     const { data, error } = await db.rpc("universe_send", { mid: m.id, content: m.body, reply: m.reply_to });
     if(epoch!==sessionEpoch)return;
     if (error) throw error;
     applyIncoming([{...data,transmitting:false}]);
     stash();
     updateMessages(true);
-  } catch {
+  } catch (error) {
     if(epoch!==sessionEpoch)return;
+    const acknowledged=S.messages.find(x=>x.id===m.id&&isConfirmed(x)&&x.revision);
+    if(m.photoPending&&acknowledged&&photoRecords.get(m.id)?.sent){acknowledged.photoPending=false;acknowledged.transmitting=false;photoAPI?.removeDraft(S.user.id,m.id).catch(()=>{});stash();updateMessages();return}
     m.transmitting=false;
     m.pending = false;
     m.failed = true;
     stash();
     updateMessages();
-    toast("Message wasn\u2019t sent. Tap retry when you\u2019re connected.");
+    toast(m.photoPending?(error.message||'Photo upload failed. Tap retry.') : "Message wasn\u2019t sent. Tap retry when you\u2019re connected.");
   }
 }
 function keepsakesHTML() {
   const list = mergeMessages(S.keepsakes||[],S.messages).filter((m) => S.favorites.has(m.id) && !m.deleted);
-  return `<section class="content-page"><div class="page-heading"><div class="eyebrow">THE WORDS WE WANT TO KEEP</div><h2 style="margin-top:15px">Little words. Big feelings.</h2><p>Your own collection of favorite messages. These stay here when you clear your chat.</p></div><div id="keepsake-list">${list.length ? list.map((m) => `<article class="note"><span class="eyebrow">${esc(m.sender === S.user.id ? "From you" : S.partner?.name || "Your person")}</span><p>${esc(m.body)}</p><small>${date(m.created_at)} \xB7 ${time(m.created_at)}</small><button class="text-btn" style="float:right" data-action="save-${m.id}">Unsave \u2661</button></article>`).join("") : `<div class="empty">${icon("bookmark")}<h2>Some words are worth keeping.</h2><p>Save a message from your conversation<br>and find it here whenever you need it.</p><button class="secondary" data-action="page-chat">Back to our conversation</button></div>`}</div></section>`;
+  return `<section class="content-page"><div class="page-heading"><div class="eyebrow">THE WORDS WE WANT TO KEEP</div><h2 style="margin-top:15px">Little words. Big feelings.</h2><p>Your own collection of favorite messages. These stay here when you clear your chat.</p></div><div id="keepsake-list">${list.length ? list.map((m) => `<article class="note"><span class="eyebrow">${esc(m.sender === S.user.id ? "From you" : S.partner?.name || "Your person")}</span><div class="kept-photo">${photoHTML(m)||`<p>${esc(m.body)}</p>`}</div><small>${date(m.created_at)} \xB7 ${time(m.created_at)}</small><button class="text-btn" style="float:right" data-action="save-${m.id}">Unsave \u2661</button></article>`).join("") : `<div class="empty">${icon("bookmark")}<h2>Some words are worth keeping.</h2><p>Save a message from your conversation<br>and find it here whenever you need it.</p><button class="secondary" data-action="page-chat">Back to our conversation</button></div>`}</div></section>`;
 }
 function settingsHTML() {
-  return `<section class="content-page"><div class="page-heading"><h2>Your little corner.</h2><p>A few thoughtful choices to make this space feel like you.</p></div><div class="settings-card"><h3>${icon("heart")} A familiar name</h3><label for="display-name">What your person calls you</label><input id="display-name" maxlength="40" value="${esc(S.me?.name)}"><button class="text-btn" style="margin-top:12px" data-action="save-name">Save name</button></div><div class="settings-card"><h3>Set the mood</h3><div class="theme-options"><button class="theme-option ${theme === "dark" ? "selected" : ""}" data-action="theme-dark"><div class="theme-preview"><i></i><i></i></div>Midnight Romance <span style="color:var(--accent)">${theme === "dark" ? "\u2713" : ""}</span></button><button class="theme-option ${theme === "light" ? "selected" : ""}" data-action="theme-light"><div class="theme-preview light"><i></i><i></i></div>Soft Love <span style="color:var(--accent)">${theme === "light" ? "\u2713" : ""}</span></button></div></div><div class="settings-card"><h3>A little hello, wherever you are</h3><p class="notification-copy">Private phone notifications show only “You have a new message.” On iPhone, add this site to your Home Screen first. Each device opts in separately.</p><button class="secondary" data-action="notifications">Manage phone notifications</button></div><div class="settings-card"><h3>Comfort & privacy</h3><div class="setting-row"><div><p>Let your person know you\u2019re here</p><small>Share your online status and typing activity.</small></div><button class="switch ${S.me?.share_presence ? "on" : ""}" role="switch" aria-checked="${!!S.me?.share_presence}" aria-label="Share online status" data-action="presence"></button></div><div class="setting-row"><div><p>A quiet, text-first space</p><small>No trackers or media downloads. Notification previews never include your messages. Messages are protected by account access, but are not end-to-end encrypted.</small></div>${icon("lock")}</div></div><div class="settings-card"><div class="setting-row"><div><p>Clear my chat</p><small>A fresh page for you. Your partner\u2019s chat stays untouched.<br>Your keepsakes stay saved.</small></div><button class="text-btn danger" data-action="clear">Clear chat</button></div></div><button class="secondary" data-action="logout">${S.demo ? "Leave sample" : "Sign out of this device"}</button></section>`;
+  return `<section class="content-page"><div class="page-heading"><h2>Your little corner.</h2><p>A few thoughtful choices to make this space feel like you.</p></div><div class="settings-card"><h3>${icon("heart")} A familiar name</h3><label for="display-name">What your person calls you</label><input id="display-name" maxlength="40" value="${esc(S.me?.name)}"><button class="text-btn" style="margin-top:12px" data-action="save-name">Save name</button></div><div class="settings-card"><h3>Set the mood</h3><div class="theme-options"><button class="theme-option ${theme === "dark" ? "selected" : ""}" data-action="theme-dark"><div class="theme-preview"><i></i><i></i></div>Midnight Romance <span style="color:var(--accent)">${theme === "dark" ? "\u2713" : ""}</span></button><button class="theme-option ${theme === "light" ? "selected" : ""}" data-action="theme-light"><div class="theme-preview light"><i></i><i></i></div>Soft Love <span style="color:var(--accent)">${theme === "light" ? "\u2713" : ""}</span></button></div></div><div class="settings-card"><h3>A little hello, wherever you are</h3><p class="notification-copy">Private phone notifications show only “You have a new message.” On iPhone, add this site to your Home Screen first. Each device opts in separately.</p><button class="secondary" data-action="notifications">Manage phone notifications</button></div><div class="settings-card"><h3>Comfort & privacy</h3><div class="setting-row"><div><p>Let your person know you\u2019re here</p><small>Share your online status and typing activity.</small></div><button class="switch ${S.me?.share_presence ? "on" : ""}" role="switch" aria-checked="${!!S.me?.share_presence}" aria-label="Share online status" data-action="presence"></button></div><div class="setting-row"><div><p>A quiet, text-first space</p><small>No trackers. Photos download only when needed. Notification previews never include your messages. Messages are protected by account access, but are not end-to-end encrypted.</small></div>${icon("lock")}</div></div><div class="settings-card"><div class="setting-row"><div><p>Clear my chat</p><small>A fresh page for you. Your partner\u2019s chat stays untouched.<br>Your keepsakes stay saved.</small></div><button class="text-btn danger" data-action="clear">Clear chat</button></div></div><button class="secondary" data-action="logout">${S.demo ? "Leave sample" : "Sign out of this device"}</button></section>`;
 }
 function aboutHTML() {
   return `<section class="content-page"><div class="welcome-moment" style="margin-top:45px"><span class="mini-heart">${icon("spark")}</span><h2>Just us. And all our little moments.</h2><p>No noise. No feeds. No audience.<br>A place to be entirely yourselves.</p></div><div class="settings-card"><h3>A universe made for two</h3><div class="setting-row"><div class="brand"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div>${esc(S.me?.name)}<small class="muted" style="display:block;margin-top:5px">Your corner</small></div></div>${icon("heart")}<div class="brand"><div class="avatar pair">${esc(S.partner?.name?.[0] || "\u2661")}</div><div>${esc(S.partner?.name || "Your person")}<small class="muted" style="display:block;margin-top:5px">${S.partner ? "Their corner" : "Invitation waiting"}</small></div></div></div></div><article class="note"><span class="eyebrow">A LITTLE REMINDER</span><p>\u201CLove is in the ordinary things.<br>The checking in. The listening.<br>The choosing each other, again.\u201D</p></article><button class="primary" data-action="page-chat">Back to your person ${icon("arrow")}</button></section>`;
@@ -524,6 +569,19 @@ async function changeSettings() {
   if (error) throw error;
 }
 async function action(a, el) {
+  if(a==='attach-photo'){
+   if(S.demo){toast('Sign in to share a private photo.');return}
+   await photos();modal(`<h2>A little moment, shared.</h2><p>Photos are compressed on your device before they leave it.</p><div class="action-list"><button data-action="photo-gallery">Choose from gallery</button><button data-action="photo-camera">Take a photo</button></div><input type="file" id="photo-gallery" accept="image/*" hidden><input type="file" id="photo-camera" accept="image/*" capture="environment" hidden>`);return;
+  }
+  if(a==='photo-gallery'||a==='photo-camera'){$('#'+a)?.click();return}
+  if(a==='send-photo'){
+   el.disabled=true;
+   const caption=$('#photo-caption').value.trim(),api=await photos(),photo=api.peekPreview();
+   const m={id:crypto.randomUUID(),seq:Math.max(0,...S.messages.map(m=>m.seq||0))+1,sender:S.user.id,body:'📷 '+(caption||'Photo'),created_at:new Date().toISOString(),reply_to:S.reply?.id||null,photoPending:true,pending:true};
+   try{await api.saveDraft(S.user.id,m,photo)}catch(error){el.disabled=false;throw error}api.takePreview();try{localStorage.setItem('universe-photo-pending-'+S.user.id,'1')}catch{}
+   photoRecords.set(m.id,{id:m.id,width:photo.width,height:photo.height});api.localThumb(m.id,photo.thumb);S.messages.push(m);S.reply=null;$('#reply-container').innerHTML='';closeModal();flushStash();updateMessages(true);await transmit(m);return;
+  }
+  if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
   if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession);else await restoreSession()}finally{el.disabled=false}return}
   if(a==='notifications'){
    if(S.demo){toast('Sign in to enable private notifications.');return}
@@ -583,7 +641,7 @@ async function action(a, el) {
         toast("Couldn\u2019t load keepsakes.");
         return;
       }
-      S.keepsakes = data;
+      S.keepsakes = data;await loadPhotos(data);
     }
     render();
     if (S.page === "chat") {
@@ -800,8 +858,8 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {closeModal();$("#sidebar")?.classList.remove("open")}
-  if (e.key === "Tab" && $(".modal")) {
-    const els = [...$(".modal").querySelectorAll("button,input,textarea,a")].filter((x) => !x.disabled);
+  if (e.key === "Tab" && $(".modal,.photo-lightbox")) {
+    const els = [...$(".modal,.photo-lightbox").querySelectorAll("button,input,textarea,a")].filter((x) => !x.disabled);
     if (e.shiftKey && document.activeElement === els[0]) {
       e.preventDefault();
       els.at(-1).focus();
@@ -830,3 +888,12 @@ if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>setNotificationAccount(S.user&&!S.demo?S.user.id:null));
 
 if(window.visualViewport){const resize=()=>{if(visualViewport.scale===1)document.documentElement.style.setProperty('--app-height',visualViewport.height+'px')};visualViewport.addEventListener('resize',resize,{passive:true});resize()}
+
+document.addEventListener('change',async event=>{
+ if(!['photo-gallery','photo-camera'].includes(event.target.id)||!event.target.files?.[0])return;
+ const file=event.target.files[0],epoch=sessionEpoch;
+ modal('<h2>A little less data.</h2><p role="status">Preparing your photo on this device…</p>');
+ try{const api=await photos(),photo=await api.prepare(file);if(epoch!==sessionEpoch)return;
+  modal(`<h2>A moment for your person.</h2><img class="photo-preview" src="${photo.url}" alt="Photo preview"><p class="photo-detail">${Math.round(photo.originalBytes/1024)} KB → ${Math.round((photo.full.size+photo.thumb.size)/1024)} KB · ${photo.width} × ${photo.height}<br>Private. Compressed here. Original camera metadata removed.</p><label for="photo-caption">A little caption (optional)</label><input id="photo-caption" maxlength="1000" placeholder="Tell the story behind it…"><div class="modal-actions"><button class="secondary" data-action="close-modal">Cancel</button><button class="primary" data-action="send-photo">Send photo ${icon('send')}</button></div>`);
+ }catch(error){if(epoch===sessionEpoch&&$('#modal-root').children.length){closeModal();toast(error.message)}}
+});

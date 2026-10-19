@@ -9,7 +9,9 @@ export function createFixture(seed=350){
  const members=users.map((u,i)=>({user_id:u.id,name:u.name,slot:i+1,share_presence:true,last_seen:null,typing_until:null,last_delivered:0,last_read:0}));
  const preferences=new Map(users.map(u=>[u.id,{user_id:u.id,cleared_through:0,theme:'dark'}]));
  const favorites=new Map(users.map(u=>[u.id,new Set()])),hidden=new Map(users.map(u=>[u.id,new Set()]));
- const reactions=[];let loseNextResponse=false;
+ const reactions=[];let loseNextResponse=false;const photos=new Map(),objects=new Map(),gardenEvents=new Map(),gardenAnswers=new Map();let failPhotoUpload=false;
+ const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Colombo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const gardenState=uid=>({day:day(),xp:[...gardenEvents.values()].reduce((n,e)=>n+e.points,0),done:[...gardenEvents.values()].filter(e=>e.user_id===uid).map(e=>e.kind),care:[...gardenEvents.values()].filter(e=>['water','feed'].includes(e.kind)),answers:[...gardenAnswers.values()].filter(a=>a.user_id===uid||gardenAnswers.has(uid)),partnerAnswered:[...gardenAnswers.values()].some(a=>a.user_id!==uid),memories:[]});
  const jwt=user=>[btoa(JSON.stringify({alg:'HS256',typ:'JWT'})),btoa(JSON.stringify({sub:user.id,email:user.email,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})),btoa('test-only')].join('.');
  function identity(token){try{return JSON.parse(atob(token.split('.')[1])).sub}catch{return null}}
  function canView(m,uid){return members.some(u=>u.user_id===uid)&&!hidden.get(uid).has(m.id)&&(m.seq>preferences.get(uid).cleared_through||favorites.get(uid).has(m.id))}
@@ -26,15 +28,34 @@ export function createFixture(seed=350){
  async function install(context){
   await context.route('https://jczsnrzqocstbpsgwkdy.supabase.co/**',async route=>{
    const req=route.request(),url=new URL(req.url()),path=url.pathname;
-   const body=req.postDataJSON()||{};const uid=identity((req.headers().authorization||'').replace('Bearer ',''));
+   const body=(req.headers()['content-type']||'').includes('application/json')?(req.postDataJSON()||{}):{};const uid=identity((req.headers().authorization||'').replace('Bearer ',''));
    const headers={'access-control-allow-origin':'*','content-type':'application/json'};
    let data=null,status=200;
    if(req.method()==='OPTIONS'){await route.fulfill({status:204,headers:{...headers,'access-control-allow-headers':'*','access-control-allow-methods':'*'}});return}
+   if(path.startsWith('/storage/v1/object/')){
+    const parts=path.replace('/storage/v1/object/','').split('/');if(parts[0]==='authenticated')parts.shift();const bucket=parts.shift(),objectPath=parts.join('/'),record=[...photos.values()].find(p=>p.path===objectPath);const stored=objects.get(bucket+':'+objectPath);let allowed=!!uid&&!!record&&(record.owner_id===uid&&!record.sent||record.sent&&canView(messages.find(m=>m.id===record.id),uid));
+    requests.push({path,method:req.method(),uid,at:Date.now()});
+    if(req.method()==='POST'){
+     if(!uid||!record||record.owner_id!==uid||record.sent){await route.fulfill({status:403,headers,body:JSON.stringify({message:'Forbidden'})});return}
+     if(stored){await route.fulfill({status:409,headers,body:JSON.stringify({statusCode:'409',message:'Already exists'})});return}
+     if(failPhotoUpload){failPhotoUpload=false;await route.fulfill({status:503,headers,body:JSON.stringify({message:'Test interrupted upload'})});return}
+     const bytes=req.postDataBuffer();if(bytes.length>(bucket==='universe-thumbs'?32768:524288)){await route.fulfill({status:413,headers,body:'{}'});return}objects.set(bucket+':'+objectPath,bytes);await route.fulfill({status:200,headers,body:JSON.stringify({Key:bucket+'/'+objectPath})});return;
+    }
+    if(!allowed||!stored){await route.fulfill({status:403,headers,body:'{}'});return}
+    await route.fulfill({status:200,headers:{...headers,'content-type':'image/jpeg'},body:stored});return;
+   }
    if(path==='/auth/v1/token'){
     const u=users.find(u=>u.email===body.email||body.refresh_token==='test-refresh-'+u.id);if(!u){data={msg:'Invalid login credentials'};status=400}else data={access_token:jwt(u),refresh_token:'test-refresh-'+u.id,token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{},created_at:new Date().toISOString()}};
    }else if(path==='/auth/v1/logout'){data={};}
    else if(!uid){status=401;data={message:'Not authenticated'};}
    else if(path.endsWith('/rpc/universe_sync_state'))data={members,preferences:preferences.get(uid),favorites:[...favorites.get(uid)],hidden:[...hidden.get(uid)],revision};
+   else if(path.endsWith('/rpc/universe_photo_reserve')){
+    data=photos.get(body.mid);if(!data){data={id:body.mid,owner_id:uid,path:uid+'/'+body.mid+'.jpg',bytes:body.full_bytes,thumb_bytes:body.preview_bytes,width:body.w,height:body.h,sent:false};photos.set(body.mid,data)}
+   }else if(path.endsWith('/rpc/universe_send_photo')){
+    const p=photos.get(body.mid);if(!p||p.owner_id!==uid||!objects.has('universe-photos:'+p.path)||!objects.has('universe-thumbs:'+p.path)){status=400;data={message:'Incomplete photo'}}else{p.sent=true;data=add(uid,'📷 '+(body.caption||'Photo'),body.mid,body.reply);event('universe_photos','UPDATE',p);if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Acknowledgement lost after photo commit'}}}
+   }else if(path.endsWith('/universe_photos')){const ids=url.searchParams.get('id');const set=ids?.startsWith('in.(')?new Set(ids.slice(4,-1).split(',')):null;data=[...photos.values()].filter(p=>(!set||set.has(p.id))&&(p.owner_id===uid&&!p.sent||p.sent&&canView(messages.find(m=>m.id===p.id),uid)))}
+   else if(path.endsWith('/rpc/universe_garden_state'))data=gardenState(uid);
+   else if(path.endsWith('/rpc/universe_garden_act')){const points={feed:3,water:3,question:5,pairs:4,code:4,moon:1};const key=uid+':'+body.activity;if(points[body.activity]&&!gardenEvents.has(key))gardenEvents.set(key,{user_id:uid,kind:body.activity,points:points[body.activity]});if(body.activity==='question'&&!gardenAnswers.has(uid))gardenAnswers.set(uid,{user_id:uid,day:day(),answer:body.note});data=gardenState(uid)}
    else if(path.endsWith('/rpc/universe_send')){
     data=add(uid,body.content,body.mid,body.reply);if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Test: acknowledgement lost after commit'}}
    }else if(path.endsWith('/rpc/universe_change')){
@@ -75,6 +96,7 @@ export function createFixture(seed=350){
   });
  }
  return {install,users,messages,members,requests,add,preferences,favorites,hidden,reactions,
+  photos,objects,gardenEvents,gardenAnswers,failNextPhotoUpload(){failPhotoUpload=true},
   pause(uid,paused=true){for(const ws of sockets)if(ws.uid===uid)ws.paused=paused},
   loseNextAcknowledgement(){loseNextResponse=true},
   editOffline(id,body){const m=messages.find(m=>m.id===id);m.body=body;m.revision=++revision;m.edited_at=new Date().toISOString();return m}

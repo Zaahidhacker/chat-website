@@ -1,5 +1,6 @@
 export function attachSwipeReply(log, onReply) {
- let gesture = null;
+ let gesture = null, blockedClick = null;
+ log.addEventListener('click',event=>{if(blockedClick&&event.target.closest('.photo-frame')&&event.target.closest('[data-message]')?.dataset.message===blockedClick){blockedClick=null;event.preventDefault();event.stopPropagation()}},{capture:true});
  const reset = () => {
   if (!gesture) return;
   gesture.bubble.style.removeProperty('transform');
@@ -7,7 +8,7 @@ export function attachSwipeReply(log, onReply) {
   gesture = null;
  };
  log.addEventListener('pointerdown', event => {
-  if (event.pointerType === 'mouse' || !event.isPrimary || event.target.closest('button,a,.removed')) return;
+  if (event.pointerType === 'mouse' || !event.isPrimary || event.target.closest('.removed') || (event.target.closest('button,a')&&!event.target.closest('.photo-frame'))) return;
   const article = event.target.closest('[data-message]'), bubble = article?.querySelector('.message-main');
   if (!bubble) return;
   reset();
@@ -27,7 +28,7 @@ export function attachSwipeReply(log, onReply) {
  log.addEventListener('pointerup', event => {
   if (!gesture || gesture.id !== event.pointerId) return;
   const id = gesture.article.dataset.message, reply = gesture.dx >= 64 && gesture.dx > gesture.dy * 1.5;
-  reset(); if (reply) onReply(id);
+  reset(); if (reply) {blockedClick=id;setTimeout(()=>{if(blockedClick===id)blockedClick=null},600);onReply(id)}
  });
  log.addEventListener('pointercancel',reset);
  // Touch browsers implicitly capture the pressed bubble first. Moving capture

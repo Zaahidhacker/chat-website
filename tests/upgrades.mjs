@@ -67,4 +67,4 @@ try{
   });assert.equal(out.length,1);assert.equal(out[0].body,'You have a new message.');assert.equal(out[0].tag,'universe-hello');await t.close();
  });
  assert.deepEqual(errors,[]);await writeFile('work/upgrade-report.json',JSON.stringify({kind:'browser and real service-worker handlers; push provider and physical devices not simulated as live delivery',results,errors},null,2));
-}catch(error){if(!page.isClosed()){console.log('Gesture trace',await page.evaluate(()=>window.gestureTrace));await page.screenshot({path:'work/upgrade-failure.png'})}throw error}finally{for(const x of contexts)await x.close().catch(()=>{});await browser.close();server.close()}
+}catch(error){if(!page.isClosed()){console.log('Gesture trace',await page.evaluate(()=>window.gestureTrace));console.log('Quotes',await page.locator('.quote').allTextContents());console.log('Recent requests',fixture.requests.slice(-12));await page.screenshot({path:'work/upgrade-failure.png'})}throw error}finally{for(const x of contexts)await x.close().catch(()=>{});await browser.close();server.close()}
