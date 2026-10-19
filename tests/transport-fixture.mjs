@@ -31,7 +31,7 @@ export function createFixture(seed=350){
    let data=null,status=200;
    if(req.method()==='OPTIONS'){await route.fulfill({status:204,headers:{...headers,'access-control-allow-headers':'*','access-control-allow-methods':'*'}});return}
    if(path==='/auth/v1/token'){
-    const u=users.find(u=>u.email===body.email);if(!u){data={msg:'Invalid login credentials'};status=400}else data={access_token:jwt(u),refresh_token:'test-refresh-'+u.id,token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{},created_at:new Date().toISOString()}};
+    const u=users.find(u=>u.email===body.email||body.refresh_token==='test-refresh-'+u.id);if(!u){data={msg:'Invalid login credentials'};status=400}else data={access_token:jwt(u),refresh_token:'test-refresh-'+u.id,token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{},created_at:new Date().toISOString()}};
    }else if(path==='/auth/v1/logout'){data={};}
    else if(!uid){status=401;data={message:'Not authenticated'};}
    else if(path.endsWith('/rpc/universe_sync_state'))data={members,preferences:preferences.get(uid),favorites:[...favorites.get(uid)],hidden:[...hidden.get(uid)],revision};

@@ -5,11 +5,19 @@ import {gzipSync,brotliCompressSync} from 'node:zlib';
 await rm('dist',{recursive:true,force:true});await mkdir('dist/assets',{recursive:true});
 const result=await build({entryPoints:['src/app.js'],bundle:true,minify:true,splitting:true,format:'esm',outdir:'dist/assets',entryNames:'[name]-[hash]',chunkNames:'[name]-[hash]',target:['es2020'],metafile:true,legalComments:'none'});
 const entry=Object.entries(result.metafile.outputs).find(([,v])=>v.entryPoint==='src/app.js')[0].replace(/^dist/,'');
-const css=(await transform(await readFile('src/style.css','utf8'),{loader:'css',minify:true,target:'es2020'})).code;
+let cssSource=await readFile('src/style.css','utf8');
+for(const [name,file]of [['manrope','node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2'],['cormorant','node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2']]){
+ const bytes=await readFile(file),version=createHash('sha256').update(bytes).digest('hex').slice(0,12);
+ const url=`/assets/${name}-${version}.woff2`;await writeFile('dist'+url,bytes);
+ cssSource=cssSource.replace(`/assets/${name}-latin.woff2`,url);
+}
+const css=(await transform(cssSource,{loader:'css',minify:true,target:'es2020'})).code;
 const hash=createHash('sha256').update(css).digest('hex').slice(0,12);
 const cssURL=`/assets/style-${hash}.css`;await writeFile('dist'+cssURL,css);
 let html=await readFile('src/index.html','utf8');html=html.replace('/app.js',entry).replace('/style.css',cssURL);await writeFile('dist/index.html',html);
-for(const f of ['icon.svg','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
+for(const f of ['icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
+await copyFile('node_modules/@fontsource-variable/manrope/LICENSE','dist/manrope-LICENSE.txt');
+await copyFile('node_modules/@fontsource/cormorant-garamond/LICENSE','dist/cormorant-LICENSE.txt');
 const shell=['/',entry,cssURL,'/icon.svg'];
 const shellVersion=createHash('sha256').update(JSON.stringify(shell)).digest('hex').slice(0,12);
 const sw=(await readFile('src/sw.js','utf8')).replace('__SHELL_ASSETS__',JSON.stringify(shell)).replace('__BUILD_VERSION__',shellVersion);

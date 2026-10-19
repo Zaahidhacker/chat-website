@@ -1,12 +1,17 @@
 import { visibleMessages, receiptLabel, mergeMessages, boundMessages, isConfirmed } from "./logic.js";
 import { createReceiptScheduler, debounce } from "./scheduling.js";
+import { explainError, isConnectionError, resilientFetch } from './connection.js';
+import { attachSwipeReply } from './swipe.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
 let db,clientReady;
 function ensureClient(){
  if(!clientReady)clientReady=import('@supabase/supabase-js').then(({createClient})=>{
-  db=createClient(URL,KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
-  db.auth.onAuthStateChange(event=>{if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login()}});
+  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
+  db.auth.onAuthStateChange((event,session)=>{
+   if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login();setNotificationAccount(null)}
+   if(event==='TOKEN_REFRESHED'&&session){db.realtime.setAuth(session.access_token)}
+  });
   return db;
  }).catch(error=>{clientReady=null;throw error});
  return clientReady;
@@ -24,6 +29,15 @@ let theme = savedTheme(), channel, pulse, typingTimer, lastTyped = 0, toastTimer
 let draft = "";
 let sessionEpoch=0,syncCursor=0,receiptScheduler=null,hiddenPause=null,stashTimer=null,renderFrame=null;
 let messageLookup=new Map(),reactionLookup=new Map(),autoScrollPending=false;
+let replyContext=new Map(), resumeSession=null;
+function setNotificationAccount(userId){navigator.serviceWorker?.ready.then(r=>r.active?.postMessage({type:'ACCOUNT',userId})).catch(()=>{})}
+function connectionScreen(error){
+ $('#app').innerHTML=`<main class="reconnect"><div class="brand">${logo()}<strong>Our Little Universe</strong></div><h1>A moment to reconnect.</h1><p role="status">${esc(explainError(error))}</p><button class="primary" data-action="retry-session">Try again ${icon('arrow')}</button><button class="text-btn" data-action="logout">Sign out of this device</button></main>`;
+}
+async function restoreSession(){
+ try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
+ catch(error){if(isConnectionError(error))connectionScreen(error);else{login();$('#login-error').textContent=explainError(error)}}
+}
 const renderSignatures=new WeakMap();
 const clockFormat=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'});
 const dayFormat=new Intl.DateTimeFormat(undefined,{month:'long',day:'numeric',year:'numeric'});
@@ -33,7 +47,7 @@ function setTheme(t) {
   theme = t;
   document.body.classList.toggle("light", t === "light");
   try{localStorage.setItem("universe-theme", t)}catch{}
-  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#faf6f2" : "#11121b";
+  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f8f5f3" : "#101011";
 }
 setTheme(theme);
 function toast(t) {
@@ -55,7 +69,7 @@ function date(t){const d=new Date(t);return d.toDateString()===new Date().toDate
 function login() {
   stop();
   S.user = null;
-  $("#app").innerHTML = `<main class="login"><section class="login-story"><div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>A LITTLE WORLD. JUST US.</small></div></div><div class="story-copy"><div class="eyebrow">Some things are just ours.</div><h1>One little space.<br>Two whole <em>worlds.</em></h1><p>For the everyday hellos, the late-night thoughts, and all the little things in between.</p><div class="orbit" aria-hidden="true"><div class="planet"></div><i></i></div></div><div class="story-footer">${icon("lock")} Invitation only. Made for two.</div></section><section class="login-form-area">${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme", "corner-theme")}<form class="login-form" id="login-form"><div class="eyebrow">YOUR PERSON IS A MESSAGE AWAY</div><h2>${inviteMode ? "Make yourself at home." : "Back to our little world."}</h2><p>${inviteMode ? "Your invitation opens the door. Choose your password, then verify your email." : "A quiet place for your favorite conversations.<br>Come on in."}</p><label for="email">Your email</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><label for="password">${inviteMode ? "Create your password" : "Your password"}</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="${inviteMode ? "new-password" : "current-password"}" minlength="12" placeholder="${inviteMode ? "At least 12 characters" : "Your little secret"}" required>${ib("eye", "Show password", "show-password")}</div>${inviteMode ? '<label for="invite">Your private invitation code</label><input id="invite" name="invite" autocomplete="off" placeholder="Paste your invitation code" required>' : ""}<div id="login-error" class="form-error" role="alert"></div><button type="submit" class="primary">${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}</button><div class="login-bottom">${icon("lock")} Only the two invited accounts can enter.<br><button type="button" class="text-btn" data-action="invite-mode">${inviteMode ? "Already have a password? Sign in" : "First time here? Set your password"}</button></div><button type="button" class="text-btn sample-link" data-action="demo">Take a peek at a sample universe \u2197</button></form></section></main>`;
+  $("#app").innerHTML = `<main class="login"><section class="login-story"><div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>A LITTLE WORLD. JUST US.</small></div></div><div class="story-copy"><div class="eyebrow">Some things are just ours.</div><h1>One little space.<br>Two whole <em>worlds.</em></h1><p>For the everyday hellos, the late-night thoughts, and all the little things in between.</p><div class="orbit" aria-hidden="true"><div class="planet"></div><i></i></div></div><div class="story-footer">${icon("lock")} Invitation only. Made for two.</div></section><section class="login-form-area">${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme", "corner-theme")}<form class="login-form" id="login-form"><div class="eyebrow">YOUR PERSON IS A MESSAGE AWAY</div><h2>${inviteMode ? "Make yourself at home." : "Back to our little world."}</h2><p>${inviteMode ? "Your invitation opens the door. Choose your password, then verify your email." : "A quiet place for your favorite conversations.<br>Come on in."}</p><label for="email">Your email</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><label for="password">${inviteMode ? "Create your password" : "Your password"}</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="${inviteMode ? "new-password" : "current-password"}" minlength="12" placeholder="${inviteMode ? "At least 12 characters" : "Your little secret"}" required>${ib("eye", "Show password", "show-password")}</div>${inviteMode ? '<label for="invite">Your private invitation code</label><input id="invite" name="invite" autocomplete="off" placeholder="Paste your invitation code" required>' : ""}<div id="login-error" class="form-error" role="alert"></div><button type="submit" class="primary">${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}</button><div class="login-bottom">${icon("lock")} Only the two invited accounts can enter.<br><button type="button" class="text-btn" data-action="invite-mode">${inviteMode ? "Already have a password? Sign in" : "First time here? Set your password"}</button></div><button type="button" class="text-btn sample-link" data-action="demo">Take a peek at a sample universe</button></form></section></main>`;
 }
 function stash(){
  if(S.demo||!S.user)return;
@@ -72,7 +86,7 @@ function clearPrivateState(){
  sessionEpoch++;refreshing=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
- messageLookup.clear();reactionLookup.clear();closeModal();
+ messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal();
 }
 function restoreOutbox() {
   try {
@@ -110,7 +124,7 @@ async function signIn(e) {
     if (result.error) throw result.error;
     await enter(result.data.session);
   } catch (err) {
-    $("#login-error").textContent = err.message === "Invalid login credentials" ? "That email and password didn\u2019t open the door. Please try again." : err.message;
+    $("#login-error").textContent = explainError(err);
     btn.disabled = false;
     btn.innerHTML = `${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}`;
   }
@@ -125,6 +139,7 @@ function sample() {
 }
 async function enter(session){
  if(!session){login();return}
+ resumeSession=session;
  const epoch=++sessionEpoch;refreshing=false;stop();
  S.demo=false;S.user=session.user;S.loading=true;
  S.messages=[];S.keepsakes=[];S.reactions=[];S.older=false;S.newMessages=false;S.latestSeq=0;S.hidden=new Set();S.reply=S.edit=null;
@@ -135,11 +150,12 @@ async function enter(session){
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
   applyMetadata(state);syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
   await loadMessages();if(epoch!==sessionEpoch)return;
-  restoreOutbox();S.loading=false;render();scrollBottom();startRealtime();
+  restoreOutbox();S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();setNotificationAccount(S.user.id);
  }catch(error){
   if(epoch!==sessionEpoch)return;
-  S.loading=false;S.user=null;login();
-  $('#login-error').textContent=error.message||'Could not open your conversation. Please try again.';
+  S.loading=false;
+  if(isConnectionError(error)){connectionScreen(error);return}
+  S.user=null;login();$('#login-error').textContent=explainError(error);
  }
 }
 function applyMetadata(state){
@@ -166,9 +182,20 @@ async function loadMessages(before){
   if(epoch!==sessionEpoch)return;if(r.error)throw r.error;
   const set=new Set(ids);S.reactions=S.reactions.filter(r=>!set.has(r.message_id)).concat(r.data);
  }
+ await loadReplyContext(data,epoch);
  receipt();
 }
+async function loadReplyContext(messages,epoch){
+ const known=new Set([...S.messages.map(m=>m.id),...replyContext.keys()]);
+ const ids=[...new Set(messages.map(m=>m.reply_to).filter(id=>id&&!known.has(id)))];
+ if(!ids.length)return;
+ const {data,error}=await db.from('universe_messages').select('*').in('id',ids);
+ if(epoch!==sessionEpoch||error)return;
+ for(const m of data)replyContext.set(m.id,m);
+ while(replyContext.size>WINDOW_SIZE)replyContext.delete(replyContext.keys().next().value);
+}
 function applyIncoming(messages){
+ for(const m of messages)if(replyContext.has(m.id))replyContext.set(m.id,m);
  const incoming=messages.filter(m=>!S.hidden?.has(m.id));
  S.latestSeq=Math.max(S.latestSeq||0,...incoming.map(m=>m.seq||0));
  let shown=incoming;
@@ -225,6 +252,8 @@ function startRealtime(){
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_messages'},payload=>{
   if(epoch!==sessionEpoch||!payload.new?.id)return;
   const near=nearBottom();applyIncoming([payload.new]);stash();updateMessages(near&&!S.older);receipt();
+  if(replyContext.has(payload.new.id))replyContext.set(payload.new.id,payload.new);
+  if(payload.new.reply_to)loadReplyContext([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
  })
  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'universe_members'},p=>{
   if(epoch!==sessionEpoch)return;
@@ -284,10 +313,11 @@ function receiptHTML(m){
 }
 function render() {
   const active = (p) => S.page === p ? "active" : "";
-  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar"><div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST A LITTLE WORLD FOR TWO.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own \u2197</button></div>' : `<div class="banner">${icon("spark")} Every message is another little memory.</div>`}${S.page === "chat" ? chatHTML() : S.page === "settings" ? settingsHTML() : S.page === "keepsakes" ? keepsakesHTML() : aboutHTML()}</main></div>`;
+  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}${S.page === "chat" ? chatHTML() : S.page === "settings" ? settingsHTML() : S.page === "keepsakes" ? keepsakesHTML() : aboutHTML()}</main></div>`;
   updateStatus();
   if (S.page === "chat") {
     primeLog();
+    attachSwipeReply($('#messages'),id=>{const m=S.messages.find(m=>m.id===id);if(m&&!m.deleted)beginReply(m)});
     const ta = $("#message-input");
     ta.value = draft;
     ta.addEventListener("input", () => {
@@ -323,7 +353,7 @@ function messageSignature(m){
 }
 function logItems(){
  const all=visibleMessages(S.messages,S.cutoff),ms=S.older?all.slice(0,WINDOW_SIZE):all.slice(-WINDOW_SIZE);
- messageLookup=new Map(S.messages.map(m=>[m.id,m]));reactionLookup=new Map();
+ messageLookup=new Map([...replyContext,...S.messages.map(m=>[m.id,m])].filter(([id,m])=>!S.hidden?.has(id)&&(m.seq>S.cutoff||S.favorites.has(id)||!isConfirmed(m))));reactionLookup=new Map();
  for(const r of S.reactions){const list=reactionLookup.get(r.message_id)||[];list.push(r);reactionLookup.set(r.message_id,list)}
  const items=[];
  const add=(key,html)=>items.push({key,signature:html,html:()=>html});
@@ -344,7 +374,7 @@ function messageHTML(m) {
   const reply = messageLookup.get(m.reply_to);
   const reactions = reactionLookup.get(m.id)||[];
   let status = receiptLabel(m, S.partner);
-  return `<article class="message ${own ? "own" : ""}" data-message="${esc(m.id)}"><div class="avatar ${own ? "" : "pair"}">${esc((own ? S.me?.name : S.partner?.name)?.[0] || "\u2661")}</div><div class="message-main"><div class="bubble ${m.deleted ? "removed" : ""}">${m.reply_to ? `<div class="quote">${reply && !reply.deleted ? esc(reply.body.slice(0, 120)) : "Earlier message"}</div>` : ""}${m.deleted ? "This message was removed" : esc(m.body)}</div>${reactions.map((r) => `<button class="reaction" data-action="react-${m.id}" aria-label="Reaction ${r.emoji}">${r.emoji}</button>`).join("")}<div class="message-meta">${S.favorites.has(m.id) ? icon("bookmark") : ""}<span>${time(m.created_at)}${m.edited_at && !m.deleted ? " \xB7 edited" : ""}</span>${own?`<span class="receipt" data-receipt="${m.id}" data-status="${status}">${receiptHTML(m)}</span>`:''}</div></div>${m.deleted ? "" : `<div class="message-actions">${ib("bookmark", S.favorites.has(m.id) ? "Unsave message" : "Save to keepsakes", `save-${m.id}`, "quick-save")}${ib("more", "Message actions", `message-${m.id}`)}</div>`}</article>`;
+  return `<article class="message ${own ? "own" : ""}" data-message="${esc(m.id)}"><span class="swipe-hint" aria-hidden="true">${icon('reply')}</span><div class="avatar ${own ? "" : "pair"}">${esc((own ? S.me?.name : S.partner?.name)?.[0] || "\u2661")}</div><div class="message-main"><div class="bubble ${m.deleted ? "removed" : ""}">${m.reply_to ? `<div class="quote"><strong>${reply?esc(reply.sender===S.user.id?'You':S.partner?.name||'Your person'):'Reply'}</strong>${reply && !reply.deleted ? esc(reply.body.slice(0, 180)) : reply?.deleted?'This message was removed':'Earlier message'}</div>` : ""}${m.deleted ? "This message was removed" : esc(m.body)}</div>${reactions.map((r) => `<button class="reaction" data-action="react-${m.id}" aria-label="Reaction ${r.emoji}">${r.emoji}</button>`).join("")}<div class="message-meta">${S.favorites.has(m.id) ? icon("bookmark") : ""}<span>${time(m.created_at)}${m.edited_at && !m.deleted ? " \xB7 edited" : ""}</span>${own?`<span class="receipt" data-receipt="${m.id}" data-status="${status}">${receiptHTML(m)}</span>`:''}</div></div>${m.deleted ? "" : `<div class="message-actions">${ib("bookmark", S.favorites.has(m.id) ? "Unsave message" : "Save to keepsakes", `save-${m.id}`, "quick-save")}${ib("more", "Message actions", `message-${m.id}`)}</div>`}</article>`;
 }
 function nearBottom() {
   const el = $("#messages");
@@ -371,6 +401,9 @@ function updateMessages(force){
    if(!node||renderSignatures.get(node)!==item.signature){
     const t=document.createElement('template');t.innerHTML=item.html();node=t.content.firstElementChild;
     node.dataset.logKey=item.key;renderSignatures.set(node,item.signature);
+    if(!existing.has(item.key)&&item.key==='message-'+S.messages.at(-1)?.id&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+     node.querySelector('.message-main')?.animate([{opacity:.6,transform:'translateY(5px)'},{opacity:1,transform:'none'}],{duration:140,easing:'ease-out'});
+    }
    }
    if(node===cursor)cursor=cursor.nextSibling;
    else el.insertBefore(node,cursor);
@@ -383,6 +416,12 @@ function updateMessages(force){
 }
 function replyHTML() {
   return S.reply || S.edit ? `<div class="reply-bar">${icon(S.edit ? "note" : "reply")}<div><b>${S.edit ? "Editing your message" : "Replying to " + esc(S.reply.sender === S.user.id ? "yourself" : S.partner?.name || "your person")}</b><br>${esc((S.edit || S.reply).body.slice(0, 110))}</div>${ib("close", "Cancel", "cancel-reply")}</div>` : "";
+}
+function beginReply(m){
+ S.reply=m;S.edit=null;closeModal();
+ if(S.page!=='chat'){S.page='chat';render()}
+ $('#reply-container').innerHTML=replyHTML();
+ $('#message-input').focus({preventScroll:true});
 }
 async function send() {
   let input = $("#message-input");
@@ -456,7 +495,7 @@ function keepsakesHTML() {
   return `<section class="content-page"><div class="page-heading"><div class="eyebrow">THE WORDS WE WANT TO KEEP</div><h2 style="margin-top:15px">Little words. Big feelings.</h2><p>Your own collection of favorite messages. These stay here when you clear your chat.</p></div><div id="keepsake-list">${list.length ? list.map((m) => `<article class="note"><span class="eyebrow">${esc(m.sender === S.user.id ? "From you" : S.partner?.name || "Your person")}</span><p>${esc(m.body)}</p><small>${date(m.created_at)} \xB7 ${time(m.created_at)}</small><button class="text-btn" style="float:right" data-action="save-${m.id}">Unsave \u2661</button></article>`).join("") : `<div class="empty">${icon("bookmark")}<h2>Some words are worth keeping.</h2><p>Save a message from your conversation<br>and find it here whenever you need it.</p><button class="secondary" data-action="page-chat">Back to our conversation</button></div>`}</div></section>`;
 }
 function settingsHTML() {
-  return `<section class="content-page"><div class="page-heading"><h2>Your little corner.</h2><p>A few thoughtful choices to make this space feel like you.</p></div><div class="settings-card"><h3>${icon("heart")} A familiar name</h3><label for="display-name">What your person calls you</label><input id="display-name" maxlength="40" value="${esc(S.me?.name)}"><button class="text-btn" style="margin-top:12px" data-action="save-name">Save name \u2197</button></div><div class="settings-card"><h3>Set the mood</h3><div class="theme-options"><button class="theme-option ${theme === "dark" ? "selected" : ""}" data-action="theme-dark"><div class="theme-preview"><i></i><i></i></div>Midnight Romance <span style="color:var(--accent)">${theme === "dark" ? "\u2713" : ""}</span></button><button class="theme-option ${theme === "light" ? "selected" : ""}" data-action="theme-light"><div class="theme-preview light"><i></i><i></i></div>Soft Love <span style="color:var(--accent)">${theme === "light" ? "\u2713" : ""}</span></button></div></div><div class="settings-card"><h3>Comfort & privacy</h3><div class="setting-row"><div><p>Let your person know you\u2019re here</p><small>Share your online status and typing activity.</small></div><button class="switch ${S.me?.share_presence ? "on" : ""}" role="switch" aria-checked="${!!S.me?.share_presence}" aria-label="Share online status" data-action="presence"></button></div><div class="setting-row"><div><p>A quiet, text-first space</p><small>No trackers, media downloads, or notification previews. Messages are protected by account access, but are not end-to-end encrypted.</small></div>${icon("lock")}</div></div><div class="settings-card"><div class="setting-row"><div><p>Clear my chat</p><small>A fresh page for you. Your partner\u2019s chat stays untouched.<br>Your keepsakes stay saved.</small></div><button class="text-btn danger" data-action="clear">Clear chat</button></div></div><button class="secondary" data-action="logout">${S.demo ? "Leave sample" : "Sign out of this device"}</button></section>`;
+  return `<section class="content-page"><div class="page-heading"><h2>Your little corner.</h2><p>A few thoughtful choices to make this space feel like you.</p></div><div class="settings-card"><h3>${icon("heart")} A familiar name</h3><label for="display-name">What your person calls you</label><input id="display-name" maxlength="40" value="${esc(S.me?.name)}"><button class="text-btn" style="margin-top:12px" data-action="save-name">Save name</button></div><div class="settings-card"><h3>Set the mood</h3><div class="theme-options"><button class="theme-option ${theme === "dark" ? "selected" : ""}" data-action="theme-dark"><div class="theme-preview"><i></i><i></i></div>Midnight Romance <span style="color:var(--accent)">${theme === "dark" ? "\u2713" : ""}</span></button><button class="theme-option ${theme === "light" ? "selected" : ""}" data-action="theme-light"><div class="theme-preview light"><i></i><i></i></div>Soft Love <span style="color:var(--accent)">${theme === "light" ? "\u2713" : ""}</span></button></div></div><div class="settings-card"><h3>A little hello, wherever you are</h3><p class="notification-copy">Private phone notifications show only “You have a new message.” On iPhone, add this site to your Home Screen first. Each device opts in separately.</p><button class="secondary" data-action="notifications">Manage phone notifications</button></div><div class="settings-card"><h3>Comfort & privacy</h3><div class="setting-row"><div><p>Let your person know you\u2019re here</p><small>Share your online status and typing activity.</small></div><button class="switch ${S.me?.share_presence ? "on" : ""}" role="switch" aria-checked="${!!S.me?.share_presence}" aria-label="Share online status" data-action="presence"></button></div><div class="setting-row"><div><p>A quiet, text-first space</p><small>No trackers or media downloads. Notification previews never include your messages. Messages are protected by account access, but are not end-to-end encrypted.</small></div>${icon("lock")}</div></div><div class="settings-card"><div class="setting-row"><div><p>Clear my chat</p><small>A fresh page for you. Your partner\u2019s chat stays untouched.<br>Your keepsakes stay saved.</small></div><button class="text-btn danger" data-action="clear">Clear chat</button></div></div><button class="secondary" data-action="logout">${S.demo ? "Leave sample" : "Sign out of this device"}</button></section>`;
 }
 function aboutHTML() {
   return `<section class="content-page"><div class="welcome-moment" style="margin-top:45px"><span class="mini-heart">${icon("spark")}</span><h2>Just us. And all our little moments.</h2><p>No noise. No feeds. No audience.<br>A place to be entirely yourselves.</p></div><div class="settings-card"><h3>A universe made for two</h3><div class="setting-row"><div class="brand"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div>${esc(S.me?.name)}<small class="muted" style="display:block;margin-top:5px">Your corner</small></div></div>${icon("heart")}<div class="brand"><div class="avatar pair">${esc(S.partner?.name?.[0] || "\u2661")}</div><div>${esc(S.partner?.name || "Your person")}<small class="muted" style="display:block;margin-top:5px">${S.partner ? "Their corner" : "Invitation waiting"}</small></div></div></div></div><article class="note"><span class="eyebrow">A LITTLE REMINDER</span><p>\u201CLove is in the ordinary things.<br>The checking in. The listening.<br>The choosing each other, again.\u201D</p></article><button class="primary" data-action="page-chat">Back to your person ${icon("arrow")}</button></section>`;
@@ -485,6 +524,14 @@ async function changeSettings() {
   if (error) throw error;
 }
 async function action(a, el) {
+  if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession);else await restoreSession()}finally{el.disabled=false}return}
+  if(a==='notifications'){
+   if(S.demo){toast('Sign in to enable private notifications.');return}
+   el.disabled=true;
+   const permission='Notification'in window&&'PushManager'in window?Notification.requestPermission():null;
+   try{const {toggleNotifications}=await import('./notifications.js');toast(await toggleNotifications(db,S.user.id,permission));render()}
+   catch(error){toast(explainError(error))}finally{el.disabled=false}return;
+  }
   if (a === "close-modal") {
     closeModal();
     return;
@@ -505,8 +552,10 @@ async function action(a, el) {
     return;
   }
   if(a==='logout'){
-   const wasDemo=S.demo;clearPrivateState();S.demo=false;login();
-   if(!wasDemo&&db)await db.auth.signOut({scope:'local'});
+   setNotificationAccount(null);
+   const wasDemo=S.demo,oldUser=S.user?.id;clearPrivateState();S.demo=false;login();
+   if(!wasDemo&&oldUser)import('./notifications.js').then(({removeNotifications})=>removeNotifications(db,oldUser)).catch(()=>{});
+   if(!wasDemo&&db){try{await db.auth.signOut({scope:'local'})}finally{try{localStorage.removeItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}}}
    return;
   }
   if (a === "toggle-theme" || a.startsWith("theme-")) {
@@ -523,6 +572,7 @@ async function action(a, el) {
   }
   if (a === "mobile-menu") {
     $("#sidebar").classList.toggle("open");
+    el.setAttribute('aria-expanded',String($('#sidebar').classList.contains('open')));
     return;
   }
   if (a.startsWith("page-")) {
@@ -672,6 +722,7 @@ async function action(a, el) {
     return;
   }
   if (prefix === "reply" || prefix === "edit") {
+    if(prefix==='reply'){beginReply(m);return}
     S.page = "chat";
     S.reply = prefix === "reply" ? m : null;
     S.edit = prefix === "edit" ? m : null;
@@ -748,7 +799,7 @@ document.addEventListener("input", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeModal();
+  if (e.key === "Escape") {closeModal();$("#sidebar")?.classList.remove("open")}
   if (e.key === "Tab" && $(".modal")) {
     const els = [...$(".modal").querySelectorAll("button,input,textarea,a")].filter((x) => !x.disabled);
     if (e.shiftKey && document.activeElement === els[0]) {
@@ -771,9 +822,11 @@ window.addEventListener('pagehide',flushStash);
 login();
 // The public login and sample don't download or initialize the messaging SDK.
 let hasSavedSession=false;try{hasSavedSession=!!localStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
-if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code')){
- ensureClient().then(()=>db.auth.getSession()).then(({data})=>{if(data.session)enter(data.session)}).catch(()=>toast('Unable to restore your session. Please sign in again.'));
-}
+if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{
+ if(event.data?.type==='OPEN_CHAT'&&S.user&&!S.demo){S.page='chat';render();refresh();scrollBottom()}
+});
+if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>setNotificationAccount(S.user&&!S.demo?S.user.id:null));
 
 if(window.visualViewport){const resize=()=>{if(visualViewport.scale===1)document.documentElement.style.setProperty('--app-height',visualViewport.height+'px')};visualViewport.addEventListener('resize',resize,{passive:true});resize()}

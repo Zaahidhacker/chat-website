@@ -12,6 +12,7 @@ npm start
 # Once on a development machine:
 npx playwright install --with-deps chromium
 npm run test:browser
+npm run test:upgrades
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -25,7 +26,9 @@ The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets h
 - Coalesced receipt requests, no unchanged database receipt writes, and one visible-tab presence heartbeat every 30 seconds.
 - After 30 seconds in the background, the socket closes. Returning reconnects and fetches changes. If realtime is unavailable, the visible tab checks for changes every 30 seconds.
 - Drafts and failed sends survive reload within the same tab. Closing a tab may discard them. Sign-out clears private in-memory state and session outboxes.
-- No external fonts, images, analytics, autoplay, media sharing or push notifications.
+- Self-hosted Latin Manrope and Cormorant fonts, with content hashes and persistent public-asset caching. No third-party font requests, analytics, autoplay or media sharing. The fonts add about 48 KB on a cold visit, then are cached.
+- Touch swipe right to reply, with vertical-scroll arbitration and an accessible menu alternative. Original reply context is fetched only when missing, subject to message RLS.
+- Browser sessions persist through normal visits and token refresh. Temporary conversation fetch failures offer reconnect without deleting the stored session. Private/incognito mode, revoked sessions, cleared browser storage and provider outages still apply.
 
 ## Access and enrollment
 
@@ -49,10 +52,22 @@ Security-definer operations are limited to the authenticated role, check members
 
 `npm run test:browser` runs the real application and Supabase SDK in two isolated browser contexts against an explicitly labeled **test-only HTTP/WebSocket transport**. It covers sending both ways, receipts, edits, reactions, lost acknowledgements, 120 missed messages, offline edits, bounded history, unread messages while reading older history, personal clear, Keepsakes, reload-safe retry, sign-out, a 6× CPU-throttled phone, and cold load at 1.6 Mbps with 150 ms latency. Test transport code is not imported into production.
 
-The execution workspace blocks direct Supabase API and Vercel-origin network access. Live account activation and authenticated Supabase WebSocket delivery have therefore **not** been verified. The test fixture's timings are not real internet round-trip measurements. See `VERIFICATION.md` for recorded results.
+The execution workspace blocks direct Supabase API and Vercel-origin browser network access. The user has independently confirmed live enrollment and two-way messaging. Automated live authenticated WebSocket delivery and physical-device push delivery have **not** been verified. Native backend tools verified the live database and push webhook authentication. The test fixture's timings are not real internet round-trip measurements. See `VERIFICATION.md` for recorded results.
 
 ## Deployment and budget
 
 `vercel.json` builds the static `dist` output. The GitHub workflow runs unit checks, the budgeted build and browser integration tests without account secrets. Deployments use Vercel's GitHub connection; no service-role key is present in the browser.
 
 The connected Vercel team uses **Hobby**, and the Supabase organization was verified on **Free**. Free quotas, inactivity pausing, GitHub Actions allowances and provider policies still apply. No purchased domain, paid API, storage plan or billing integration is used.
+
+## Phone notifications
+
+In Settings, choose **Manage phone notifications** on each device. Permission is requested only after this action. Android Chromium supports Web Push; on iPhone/iPad, use iOS/iPadOS 16.4+ and add the site to the Home Screen before enabling notifications. Browser and operating-system support, permission settings, battery restrictions and network availability govern actual delivery. If notifications are already enabled, the control offers to turn them off.
+
+`supabase/009_private_push.sql` is an **additive upgrade** for the existing database. Do not rerun the initial migrations or reset an in-use database. New subscription records are private to their account, limited to five devices, and restricted to known HTTPS browser push providers. The database queues an asynchronous webhook only for a new message with a recipient subscription. No browser needs to remain open. The edge function looks up the authoritative sender and excludes their subscriptions. Edits, retries of an existing message UUID, and historic messages do not emit a new-message webhook.
+
+The function `universe-push` authenticates the database webhook with a randomly generated, constant-time checked secret. Its platform `verify_jwt` setting is false because this is a webhook; its own authentication remains mandatory. VAPID private keys and webhook secrets live in Supabase Vault. Only a service-role RPC can retrieve them; browsers can retrieve the public VAPID key only after membership validation. The live deployment has already been provisioned; do not regenerate these keys without planning subscription re-enrollment.
+
+The service worker receives only recipient/message IDs, displays **“You have a new message.”**, verifies the active account, suppresses notifications for a focused open chat, and handles clicks by focusing or opening the app. Sign-out clears its account association and closes visible notifications. Service worker storage contains no conversation bodies or login credentials. Push is best effort: provider/network failures are logged without private data, expired endpoints are removed, duplicate webhook calls are claimed once per device, and a failed notification never rolls back a message. There is no durable retry scheduler for failed provider deliveries.
+
+Before this upgrade a private workspace backup of existing conversations and account identities was saved and verified with the owner's explicit approval. All 28 baseline message records were compared against the database and were exactly unchanged after the additive migration. The backup, generated signing keys and private comparison SQL stay in ignored `work/`; none is committed or deployed.

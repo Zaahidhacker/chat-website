@@ -1,0 +1,13 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {toggleNotifications} from '../src/notifications.js';
+function setup({permission='granted',saveError=null,current=null}={}){
+ const calls=[];const sub={endpoint:'https://fcm.googleapis.com/fcm/send/test-only',toJSON:()=>({endpoint:'test',keys:{}}),unsubscribe:async()=>{calls.push('unsubscribe')}};
+ const registration={update:async()=>{},pushManager:{getSubscription:async()=>current,subscribe:async options=>{calls.push(['subscribe',options.userVisibleOnly,options.applicationServerKey.length]);return sub}},active:{postMessage:value=>calls.push(['worker',value])}};
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{serviceWorker:{register:async()=>registration,ready:Promise.resolve(registration)}}});
+ globalThis.window={PushManager:function(){},confirm:()=>true};globalThis.Notification={requestPermission:async()=>permission};window.Notification=globalThis.Notification;
+ const db={rpc:async name=>{calls.push(name);return name==='universe_push_key'?{data:'BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'}:{error:saveError}},from:()=>({delete:()=>({eq:()=>({eq:async()=>({})})})})};
+ return {calls,db,sub};
+}
+test('denied notification permission makes no database request',async()=>{const {calls,db}=setup({permission:'denied'});assert.match(await toggleNotifications(db,'me'),/blocked/);assert.deepEqual(calls,[])});
+test('consented push registration is user-visible and scoped to the signed-in account',async()=>{const {calls,db}=setup();assert.match(await toggleNotifications(db,'me'),/are on/);assert(calls.includes('universe_push_register'));assert.deepEqual(calls.find(x=>Array.isArray(x)&&x[0]==='subscribe'),['subscribe',true,65]);assert.deepEqual(calls.at(-1),['worker',{type:'ACCOUNT',userId:'me'}])});
+test('failed subscription registration revokes the orphan browser endpoint',async()=>{const {calls,db}=setup({saveError:Error('Membership denied')});await assert.rejects(()=>toggleNotifications(db,'intruder'),/Membership denied/);assert(calls.includes('unsubscribe'));assert(!calls.some(x=>Array.isArray(x)&&x[0]==='worker'))});
+test('an unsupported browser gets accurate installation guidance',async()=>{const {db}=setup();delete window.PushManager;assert.match(await toggleNotifications(db,'me'),/Home Screen/)});
