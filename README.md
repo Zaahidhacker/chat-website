@@ -15,6 +15,8 @@ npm run test:browser
 npm run test:upgrades
 npm run test:features
 npm run test:island
+npm run test:links
+npm run test:location
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -91,3 +93,7 @@ Open **Our secret island** from navigation for a three-chapter illustrated adven
 ## Clickable web links
 
 Existing and new message bodies, photo captions, Keepsakes and search results automatically render HTTP/HTTPS URLs, `www` addresses and bare domains such as `example.com` as links. Bare domains use HTTPS; links open separately with `noopener noreferrer`. Link rendering escapes message HTML, excludes email/unsupported-scheme fragments, preserves surrounding punctuation and performs no preview downloads. Stored message text and all database records stay unchanged. `npm run test:links` verifies old/new messages in two isolated browsers and native phone taps to a controlled external destination.
+
+## Our places
+
+Opt-in location sharing uses browser GPS, private Supabase latest-point records and a separately enabled Leaflet/OpenStreetMap map. Each person chooses a duration, can pause or stop from any page, and sees accuracy and update time. GPS pauses when the website is hidden; continuous locked-screen/background tracking is unsupported. Reloading does not silently restart GPS. Only the additive `016_private_location_sharing.sql` migration is used. See [LOCATION-SHARING.md](LOCATION-SHARING.md) for official free-tier research, privacy, offline stopping, preservation, verification limits and rollback.

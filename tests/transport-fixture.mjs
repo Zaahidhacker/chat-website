@@ -19,8 +19,10 @@ export function createFixture(seed=350){
   for(const ws of sockets){if(ws.paused)continue;
    if(table==='universe_messages'&&!canView(record,ws.uid))continue;
    if(['universe_preferences','universe_hidden','universe_favorites'].includes(table)&&(record.user_id||old.user_id)!==ws.uid)continue;
-   const subs=ws.subscriptions.filter(s=>s.table===table&&(s.event==='*'||s.event===type));if(!subs.length)continue;
-   ws.send([null,null,ws.topic,'postgres_changes',{ids:subs.map(s=>s.id),data:{schema:'public',table,type,commit_timestamp:new Date().toISOString(),columns:[],record,old_record:old,errors:null}}]);
+   for(const [topic,channel] of ws.channels){
+    const subs=channel.subscriptions.filter(s=>s.table===table&&(s.event==='*'||s.event===type));if(!subs.length)continue;
+    ws.send([null,null,topic,'postgres_changes',{ids:subs.map(s=>s.id),data:{schema:'public',table,type,commit_timestamp:new Date().toISOString(),columns:[],record,old_record:old,errors:null}}]);
+   }
   }
  }
  function add(sender,body,id=crypto.randomUUID(),reply=null){const old=messages.find(m=>m.id===id);if(old)return old;const m={id,sender,body,seq:++sequence,revision:++revision,created_at:new Date().toISOString(),edited_at:null,deleted:false,reply_to:reply};messages.push(m);event('universe_messages','INSERT',m);return m}
@@ -86,17 +88,17 @@ export function createFixture(seed=350){
    await route.fulfill({status,headers,body:serialized});
   });
   await context.routeWebSocket('wss://jczsnrzqocstbpsgwkdy.supabase.co/**',route=>{
-   const ws={route,uid:null,topic:null,subscriptions:[],paused:false,arrayProtocol:false,send(parts){const [join_ref,ref,topic,event,payload]=parts;route.send(JSON.stringify(ws.arrayProtocol?parts:{join_ref,ref,topic,event,payload}))}};sockets.add(ws);
+   const ws={route,uid:null,channels:new Map(),paused:false,arrayProtocol:false,send(parts){const [join_ref,ref,topic,event,payload]=parts;route.send(JSON.stringify(ws.arrayProtocol?parts:{join_ref,ref,topic,event,payload}))}};sockets.add(ws);
    route.onMessage(raw=>{const parsed=JSON.parse(String(raw));ws.arrayProtocol=Array.isArray(parsed);const [joinRef,ref,topic,event,payload]=ws.arrayProtocol?parsed:[parsed.join_ref,parsed.ref,parsed.topic,parsed.event,parsed.payload];
     if(event==='phx_join'){
-     ws.uid=identity(payload.access_token);ws.topic=topic;ws.subscriptions=(payload.config.postgres_changes||[]).map((s,i)=>({...s,id:i+1}));
-     ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{postgres_changes:ws.subscriptions}}]);
-    }else if(event==='heartbeat'||event==='phx_leave')ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{}}]);
+     ws.uid=identity(payload.access_token);const subscriptions=(payload.config.postgres_changes||[]).map((s,i)=>({...s,id:i+1}));ws.channels.set(topic,{subscriptions});
+     ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{postgres_changes:subscriptions}}]);
+    }else if(event==='heartbeat'||event==='phx_leave'){if(event==='phx_leave')ws.channels.delete(topic);ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{}}]);}
    });route.onClose(()=>sockets.delete(ws));
   });
  }
  return {install,users,messages,members,requests,add,preferences,favorites,hidden,reactions,
-  photos,objects,gardenEvents,gardenAnswers,failNextPhotoUpload(){failPhotoUpload=true},
+  broadcast(table,type,record){event(table,type,record)},photos,objects,gardenEvents,gardenAnswers,failNextPhotoUpload(){failPhotoUpload=true},
   pause(uid,paused=true){for(const ws of sockets)if(ws.uid===uid)ws.paused=paused},
   loseNextAcknowledgement(){loseNextResponse=true},
   editOffline(id,body){const m=messages.find(m=>m.id===id);m.body=body;m.revision=++revision;m.edited_at=new Date().toISOString();return m}

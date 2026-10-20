@@ -4,8 +4,8 @@ import {createHash} from 'node:crypto';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
 await rm('dist',{recursive:true,force:true});await mkdir('dist/assets',{recursive:true});
 const featureDefines={};
-for(const name of ['photos','garden','island']){
- const css=(await transform(await readFile(`src/${name}.css`,'utf8'),{loader:'css',minify:true})).code;
+for(const name of ['photos','garden','island','location']){
+ const css=(await transform((name==='location'?await readFile('node_modules/leaflet/dist/leaflet.css','utf8'):'')+await readFile(`src/${name}.css`,'utf8'),{loader:'css',minify:true})).code;
  const hash=createHash('sha256').update(css).digest('hex').slice(0,12),url=`/assets/${name}-${hash}.css`;
  await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':name.toUpperCase()+'_STYLE_URL']=JSON.stringify(url);
 }
@@ -25,6 +25,7 @@ const hash=createHash('sha256').update(css).digest('hex').slice(0,12);
 const cssURL=`/assets/style-${hash}.css`;await writeFile('dist'+cssURL,css);
 let html=await readFile('src/index.html','utf8');html=html.replace('/app.js',entry).replace('/style.css',cssURL);await writeFile('dist/index.html',html);
 for(const f of ['icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
+await copyFile('node_modules/leaflet/LICENSE','dist/leaflet-LICENSE.txt');
 await copyFile('node_modules/@fontsource-variable/manrope/LICENSE','dist/manrope-LICENSE.txt');
 await copyFile('node_modules/@fontsource/cormorant-garamond/LICENSE','dist/cormorant-LICENSE.txt');
 const shell=['/',entry,cssURL,'/icon.svg'];

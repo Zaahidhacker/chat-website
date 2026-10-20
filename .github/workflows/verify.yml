@@ -24,3 +24,4 @@ jobs:
       - run: npm run test:features
       - run: npm run test:island
       - run: npm run test:links
+      - run: npm run test:location
