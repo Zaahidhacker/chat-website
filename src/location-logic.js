@@ -1,4 +1,12 @@
 export const MOVING_MS=10000,STILL_MS=60000,FRESH_MS=75000;
+export function fixAge(sample,now=Date.now()){
+ const time=Date.parse(sample);if(!Number.isFinite(time))return 'time unavailable';
+ const seconds=Math.max(0,Math.floor((now-time)/1000));
+ if(seconds<10)return 'just now';if(seconds<60)return `${seconds} seconds ago`;
+ const minutes=Math.floor(seconds/60);if(minutes<60)return `${minutes} minute${minutes===1?'':'s'} ago`;
+ const hours=Math.floor(minutes/60);if(hours<24)return `${hours} hour${hours===1?'':'s'} ago`;
+ const days=Math.floor(hours/24);return `${days} day${days===1?'':'s'} ago`;
+}
 export function distance(a,b){const rad=Math.PI/180,dLat=(b.latitude-a.latitude)*rad,dLon=(b.longitude-a.longitude)*rad;const h=Math.sin(dLat/2)**2+Math.cos(a.latitude*rad)*Math.cos(b.latitude*rad)*Math.sin(dLon/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)))}
 export function positionSample(position,now=Date.now()){
  const c=position?.coords,t=position?.timestamp;
