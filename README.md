@@ -17,6 +17,7 @@ npm run test:features
 npm run test:island
 npm run test:links
 npm run test:location
+npm run test:overhaul
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -97,3 +98,7 @@ Existing and new message bodies, photo captions, Keepsakes and search results au
 ## Our places
 
 Opt-in location sharing uses browser GPS, private Supabase latest-point records and a separately enabled Leaflet/OpenStreetMap map. Each person chooses a duration, can pause or stop from any page, and sees accuracy and update time. GPS pauses when the website is hidden; continuous locked-screen/background tracking is unsupported. Reloading does not silently restart GPS. Only the additive `016_private_location_sharing.sql` migration is used. See [LOCATION-SHARING.md](LOCATION-SHARING.md) for official free-tier research, privacy, offline stopping, preservation, verification limits and rollback.
+
+## The polished little world
+
+The header now shows privacy-controlled Online/Last seen from existing activity timestamps; online can take roughly a minute to expire. Receipt transitions preserve bubbles, unread activity appears away from chat, replies keep drafts on cancellation, and photo preparation can be canceled safely. **Our little world** includes daily date ideas, unsent romantic note drafts, Firefly Trail and an optional pocket breathing pause. Existing garden/island games have clearer feedback, optional memory peeks and more consistent controls. New activities make no database requests. See [OVERHAUL.md](OVERHAUL.md) for the complete changes, preservation baseline, performance and verification limits. No database migration accompanies this release.

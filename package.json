@@ -12,7 +12,8 @@
     "test:features": "node tests/photos-garden.mjs",
     "test:island": "node tests/island-browser.mjs",
     "test:links": "node tests/links-browser.mjs",
-    "test:location": "node tests/location-browser.mjs"
+    "test:location": "node tests/location-browser.mjs",
+    "test:overhaul": "node tests/overhaul-browser.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

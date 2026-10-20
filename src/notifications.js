@@ -7,8 +7,9 @@ async function registration(){
  if(pending){
   if(pending.state==='installed')pending.postMessage('SKIP_WAITING');
   await new Promise((resolve,reject)=>{
-   const timeout=setTimeout(()=>reject(Error('Notification setup is taking a moment. Please try again.')),15000);
-   const changed=()=>{if(pending.state==='installed')pending.postMessage('SKIP_WAITING');if(pending.state==='activated'){clearTimeout(timeout);resolve()}if(pending.state==='redundant'){clearTimeout(timeout);reject(Error('Please reload and try notification setup again.'))}};
+   const done=(error)=>{clearTimeout(timeout);pending.removeEventListener('statechange',changed);error?reject(error):resolve()};
+   const timeout=setTimeout(()=>done(Error('Notification setup is taking a moment. Please try again.')),15000);
+   const changed=()=>{if(pending.state==='installed')pending.postMessage('SKIP_WAITING');if(pending.state==='activated'){done()}if(pending.state==='redundant'){done(Error('Please reload and try notification setup again.'))}};
    pending.addEventListener('statechange',changed);changed();
   });
  }

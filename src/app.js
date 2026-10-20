@@ -5,9 +5,9 @@ import { linkify } from './links.js';
 import { attachSwipeReply } from './swipe.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
-let db,clientReady;
+let db,clientReady,chatView;
 function ensureClient(){
- if(!clientReady)clientReady=import('@supabase/supabase-js').then(({createClient})=>{
+ if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(([{createClient},views])=>{chatView=views;
   db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
   db.auth.onAuthStateChange((event,session)=>{
    if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login();setNotificationAccount(null)}
@@ -26,15 +26,18 @@ const ib = (n, title, action2, cl = "") => `<button type="button" class="icon-bt
 const logo = () => `<div class="logo">${icon("heart")}</div>`;
 let S = { user: null, me: null, partner: null, messages: [], favorites: /* @__PURE__ */ new Set(), reactions: [], cutoff: 0, page: "chat", demo: false, reply: null, edit: null, loading: false, hasMore: true, connected: false };
 function savedTheme(){try{return localStorage.getItem("universe-theme")||"dark"}catch{return "dark"}}
-let theme = savedTheme(), channel, pulse, typingTimer, lastTyped = 0, toastTimer, inviteMode = false, loadingOlder = false, refreshing = false, refreshQueued = false;
+let theme = savedTheme(), channel, pulse, presenceClock, typingTimer, lastTyped = 0, toastTimer, inviteMode = false, loadingOlder = false, refreshing = false, refreshQueued = false;
 let draft = "";
 let sessionEpoch=0,syncCursor=0,receiptScheduler=null,hiddenPause=null,stashTimer=null,renderFrame=null;
 let messageLookup=new Map(),reactionLookup=new Map(),autoScrollPending=false;
 let replyContext=new Map(), resumeSession=null;
-let photoAPI,garden,island,locationAPI,photoRecords=new Map();
+let ritualGame,pageViews,photoAPI,garden,island,locationAPI,photoRecords=new Map();
+function pageContext(){return {S,theme,esc,icon,date,time,photoHTML,mergeMessages,linkify}}
+async function secondaryPages(){return pageViews??=await import('./pages.js')}
+const secondaryPlaceholder=()=>'<section class="content-page"><div class="page-skeleton" role="status">Opening your little corner…</div></section>';
 async function photos(){photoAPI=await import('./photos.js');photoAPI.configure(db,S.user?.id);return photoAPI}
 async function loadPhotos(messages,epoch=sessionEpoch){
- if(!messages.length||S.demo)return;
+ messages=messages.filter(m=>photoRecords.has(m.id)||m.photoPending||m.body?.startsWith('📷 '));if(!messages.length||S.demo)return;
  const {data,error}=await db.from('universe_photos').select('*').in('id',messages.map(m=>m.id));
  if(epoch!==sessionEpoch||error)return;
  for(const p of data)photoRecords.set(p.id,p);
@@ -72,14 +75,16 @@ function toast(t) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.remove("visible"), 4e3);
 }
+let dialogOpener,photoSelection=0;
 function modal(html) {
+  if(!$("#modal-root").children.length)dialogOpener=document.activeElement;$("#app").inert=true;
   $("#modal-root").innerHTML = `<div class="modal-overlay"><section class="modal" role="dialog" aria-modal="true" aria-label="Conversation action">${ib("close", "Close", "close-modal", "modal-close")}${html}</section></div>`;
   const first = $("button,input,textarea", $(".modal"));
   first?.focus();
 }
 function closeModal() {
-  photoAPI?.cancelPreview();
-  $("#modal-root").innerHTML = "";
+  photoSelection++;photoAPI?.cancelPreview();
+  $("#modal-root").innerHTML = "";$("#app").inert=false;if(dialogOpener?.isConnected)dialogOpener.focus({preventScroll:true});dialogOpener=null;
 }
 function time(t){return clockFormat.format(new Date(t))}
 function date(t){const d=new Date(t);return d.toDateString()===new Date().toDateString()?'Today':dayFormat.format(d)}
@@ -100,11 +105,11 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
- locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
+ ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
- messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal();
+ document.title='Our Little Universe — Just us.';messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal();
 }
 function restoreOutbox() {
   try {
@@ -116,7 +121,7 @@ function restoreOutbox() {
 }
 function stop(){
  if(channel&&db){db.removeChannel(channel);channel=null}
- clearInterval(pulse);clearTimeout(hiddenPause);receiptScheduler?.close();receiptScheduler=null;
+ clearInterval(pulse);clearInterval(presenceClock);clearTimeout(typingTimer);clearTimeout(hiddenPause);receiptScheduler?.close();receiptScheduler=null;
  if(renderFrame!==null){cancelAnimationFrame(renderFrame);renderFrame=null}
 }
 async function signIn(e) {
@@ -147,7 +152,8 @@ async function signIn(e) {
     btn.innerHTML = `${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}`;
   }
 }
-function sample() {
+async function sample() {
+  chatView??=await import('./conversation-view.js');
   stop();
   S = { ...S, user: { id: "me" }, me: { user_id: "me", name: "Zaahid", slot: 1, share_presence: true }, partner: { user_id: "them", name: "Layaana", share_presence: true, last_seen: (/* @__PURE__ */ new Date()).toISOString(), last_delivered: 100, last_read: 100 }, demo: true, older:false, latestSeq:5, newMessages:false, hidden:new Set(), cutoff: 0, page: "chat", hasMore: false, connected: true, favorites: /* @__PURE__ */ new Set(["d3"]), reactions: [{ message_id: "d4", user_id: "me", emoji: "\u2764\uFE0F" }] };
   const now = Date.now();
@@ -166,7 +172,7 @@ async function enter(session){
   if(epoch!==sessionEpoch)return;
   if(error)throw error;
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
-  applyMetadata(state);syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
+  applyMetadata(state);S.unreadBoundary=S.me?.last_read||0;syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
   await loadMessages();if(epoch!==sessionEpoch)return;
   restoreOutbox();
   let pendingPhotos=false;try{pendingPhotos=!!localStorage.getItem('universe-photo-pending-'+S.user.id)}catch{}
@@ -230,7 +236,7 @@ function applyIncoming(messages){
   shown=incoming.filter(m=>m.seq<=max||S.messages.some(old=>old.id===m.id));
   if(shown.length<incoming.length)S.newMessages=true;
  }
- S.messages=boundMessages(mergeMessages(S.messages,shown),{limit:WINDOW_SIZE,older:S.older,favorites:new Set()});
+ S.messages=boundMessages(mergeMessages(S.messages,shown),{limit:WINDOW_SIZE,older:S.older,favorites:new Set()});chatView.unread(S);
 }
 async function showLatest(){
  S.older=false;S.newMessages=false;
@@ -289,12 +295,12 @@ function startRealtime(){
  })
  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'universe_members'},p=>{
   if(epoch!==sessionEpoch)return;
-  if(p.new.user_id===S.user.id){S.me=p.new;return}
+  if(p.new.user_id===S.user.id){S.me=p.new;chatView.unread(S);return}
   const nameChanged=S.partner?.name!==p.new.name;const receiptsChanged=S.partner?.last_read!==p.new.last_read||S.partner?.last_delivered!==p.new.last_delivered;S.partner=p.new;
   if(nameChanged&&$('#partner-name'))$('#partner-name').textContent=S.partner.name;
   if(receiptsChanged)updateReceipts();updateStatus();
   const t=$('#typing');clearTimeout(typingTimer);
-  if(t)t.textContent=p.new.typing_until&&new Date(p.new.typing_until)>new Date()?(S.partner.name||'Your person')+' is typing…':'';
+  if(t)t.innerHTML=p.new.share_presence&&p.new.typing_until&&new Date(p.new.typing_until)>new Date()?'<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>'+esc(S.partner.name||'Your person')+' is typing…</span>':'';
   typingTimer=setTimeout(()=>{if($('#typing'))$('#typing').textContent=''},4000);
  })
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_reactions'},p=>{
@@ -317,14 +323,16 @@ function startRealtime(){
   if(epoch!==sessionEpoch)return;S.connected=status==='SUBSCRIBED';updateStatus();
   if(S.connected)refresh();
  });
- clearInterval(pulse);
+ clearInterval(pulse);clearInterval(presenceClock);presenceClock=setInterval(()=>{if(!document.hidden)updateStatus()},15000);
  pulse=setInterval(()=>{if(!document.hidden&&navigator.onLine){receipt();updateStatus();if(!S.connected||!S.dataOnline)refresh()}},30000);
  receipt();
 }
 function updateStatus(){
- const el=$('#partner-status');if(!el)return;
- const online=S.partner?.share_presence&&S.partner.last_seen&&Date.now()-new Date(S.partner.last_seen).getTime()<70000;
- el.innerHTML=!navigator.onLine?'Offline · your messages are safe to retry':!S.partner?'Your person hasn’t joined yet':S.dataOnline===false?'Connection interrupted · retrying…':!S.connected&&!S.demo?'Connecting · checking for messages':online?'<span class="dot"></span> Here in our universe':'A little space, just for us';
+ chatView?.unread(S);const el=$('#partner-status');if(!el)return;
+ const activity=chatView.presenceLabel(S.partner,{connected:S.connected||S.demo});
+ const text=!navigator.onLine?'Offline · your messages are safe to retry':S.dataOnline===false?'Connection interrupted · retrying…':!S.connected&&!S.demo?'Connecting · checking for messages':activity.text;
+ el.innerHTML=(activity.online&&navigator.onLine&&S.dataOnline!==false?'<span class="dot"></span> ':'')+esc(text);el.title=activity.title||'';
+
 }
 function receipt(){
  if(S.demo||!S.user||document.hidden||!navigator.onLine||!receiptScheduler)return;
@@ -335,19 +343,18 @@ function updateReceipts(){
  if(S.page!=='chat')return;
  for(const el of document.querySelectorAll('[data-receipt]')){
   const m=S.messages.find(m=>m.id===el.dataset.receipt);if(!m)continue;
-  const status=receiptLabel(m,S.partner);if(el.dataset.status===status)continue;
-  el.dataset.status=status;el.innerHTML=receiptHTML(m);const article=el.closest("[data-message]");if(article)renderSignatures.set(article,messageSignature(m));
+  const stamp=el.closest('[data-message]')?.querySelector('.message-time'),label=time(m.created_at)+(m.edited_at&&!m.deleted?' · edited':'');if(stamp&&stamp.textContent!==label)stamp.textContent=label;const status=receiptLabel(m,S.partner);if(el.dataset.status===status)continue;
+  el.dataset.status=status;el.innerHTML=receiptHTML(m);
  }
 }
-function receiptHTML(m){
- const status=receiptLabel(m,S.partner);
- return `<span class="${status==='Read'?'ticks':''}" title="${status}">${status==='Read'||status==='Delivered'?'✓✓':status==='Sent'?'✓':status==='Sending'?'◷':''}</span>${m.failed?`<button class="text-btn" data-action="retry-${m.id}">Failed · retry</button>`:`<span class="sr-status">${status}</span>`}`;
-}
+function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))}
+
 function render() {
-  locationAPI?.unmount();island?.unmount();garden?.unmount();
+  ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
   const active = (p) => S.page === p ? "active" : "";
-  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><button class="nav ${active("garden")}" data-action="page-garden">${icon("sun")} Our moon garden</button><button class="nav ${active("island")}" data-action="page-island">${icon("moon")} Our secret island</button><button class="nav ${active("location")}" data-action="page-location">${icon("eye")} Our places</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : S.page === "garden" ? "Our moon garden" : S.page === "island" ? "Our secret island" : S.page === "location" ? "Our places" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}<div id="location-controls"></div>${S.page === "chat" ? chatHTML() : S.page === "settings" ? settingsHTML() : S.page === "keepsakes" ? keepsakesHTML() : S.page === "garden" ? '<section class="content-page" id="garden-root"><p role="status">Opening our garden…</p></section>' : S.page === "island" ? '<section class="content-page" id="island-root"><p role="status">Finding our island…</p></section>' : S.page === "location" ? '<section class="content-page" id="location-root"><p>Opening our places…</p></section>' : aboutHTML()}</main></div>`;
+  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><button class="nav ${active("garden")}" data-action="page-garden">${icon("sun")} Our moon garden</button><button class="nav ${active("island")}" data-action="page-island">${icon("moon")} Our secret island</button><button class="nav ${active("location")}" data-action="page-location">${icon("eye")} Our places</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : S.page === "garden" ? "Our moon garden" : S.page === "island" ? "Our secret island" : S.page === "location" ? "Our places" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}<div id="location-controls"></div>${S.page === "chat" ? chatHTML() : S.page === "settings" ? (pageViews?.settingsHTML(pageContext())||secondaryPlaceholder()) : S.page === "keepsakes" ? (pageViews?.keepsakesHTML(pageContext())||secondaryPlaceholder()) : S.page === "garden" ? '<section class="content-page" id="garden-root"><p role="status">Opening our garden…</p></section>' : S.page === "island" ? '<section class="content-page" id="island-root"><p role="status">Finding our island…</p></section>' : S.page === "location" ? '<section class="content-page" id="location-root"><p>Opening our places…</p></section>' : (pageViews?.aboutHTML(pageContext())||secondaryPlaceholder())}</main></div>`;
   updateStatus();locationAPI?.controls($("#location-controls"));
+  if(S.page==='about')import('./rituals.js').then(module=>{if(S.page==='about'&&$('#ritual-root')){ritualGame=module;module.mount($('#ritual-root'),{user:S.user,draft:prepareDraft})}}).catch(()=>{if($('#ritual-root'))$('#ritual-root').textContent='Couldn’t open these activities. Check your connection and reopen this page.'});
   if(S.page==='keepsakes'&&photoAPI)photoAPI.observe($('#keepsake-list'),id=>photoRecords.get(id));
   if(S.page==='location')import('./location.js').then(async module=>{if(S.page==='location'&&S.user){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:S.demo});if(S.page==='location'&&S.user){module.controls($('#location-controls'));module.mount($('#location-root'),{user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}}).catch(()=>{if($('#location-root'))$('#location-root').textContent='Could not open locations. Return to chat and try again.'});
   if(S.page==='island')import('./island.js').then(module=>{if(S.page==='island'&&S.user){island=module;island.mount($('#island-root'),{db,user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}).catch(()=>{if($('#island-root'))$('#island-root').innerHTML='<p>Could not find our island. Return to chat and try again.</p>'});
@@ -383,11 +390,11 @@ function render() {
   }
 }
 function chatHTML() {
-  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("photo", "Share a photo", "attach-photo")}${ib("smile", "Choose an emoji", "emoji")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea><button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
+  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("photo", "Share a photo", "attach-photo")}${ib("smile", "Choose an emoji", "emoji")}${ib("spark", "A little note", "little-notes", "ritual-compose")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea><button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
 }
 function messageSignature(m){
  const reply=messageLookup.get(m.reply_to);
- return JSON.stringify([m.revision,m.body,m.deleted,m.edited_at,m.pending,m.failed,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),receiptLabel(m,S.partner),reactionLookup.get(m.id)||[]]);
+ return JSON.stringify([m.body,!!m.deleted,m.edited_at,(m.photoPending||photoRecords.has(m.id))?m.pending:null,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),reactionLookup.get(m.id)||[]]);
 }
 function logItems(){
  const all=visibleMessages(S.messages,S.cutoff),ms=S.older?all.slice(0,WINDOW_SIZE):all.slice(-WINDOW_SIZE);
@@ -398,22 +405,19 @@ function logItems(){
  if(!ms.length){add('empty-'+S.cutoff,`<div class="welcome-moment" style="margin-top:70px"><span class="mini-heart">${icon('heart')}</span><h2>${S.cutoff?'A fresh little page.':'Our story starts here.'}</h2><p>${S.cutoff?'Your view is clear. Your partner’s memories are still theirs.':'No grand words needed. A little hello is a lovely beginning.'}</p></div>`);return items}
  if(S.hasMore)add('older','<button class="more-btn" data-action="older">Earlier little moments ↑</button>');
  if(!S.hasMore&&!S.cutoff)add('welcome',`<div class="welcome-moment"><span class="mini-heart">${icon('heart')}</span><h2>A little world, with you in it.</h2><p>For the big feelings and the tiny details.<br>There’s a place for all of them here.</p></div>`);
- let last='';
+ let last='',previous=null,unread=false;
  for(const m of ms){const day=date(m.created_at);if(day!==last){add('day-'+day,`<div class="day">${esc(day)} <span>♡</span></div>`);last=day}
-  items.push({key:'message-'+m.id,signature:messageSignature(m),html:()=>messageHTML(m)});
+  if(!unread&&m.sender!==S.user.id&&m.seq>S.unreadBoundary&&S.unreadBoundary>0&&!S.older){add('unread-'+S.unreadBoundary,'<div class="unread-divider" role="separator">New little moments</div>');unread=true}
+  const grouped=!!previous&&previous.sender===m.sender&&date(previous.created_at)===day&&new Date(m.created_at)-new Date(previous.created_at)<300000;
+  items.push({key:'message-'+m.id,signature:messageSignature(m)+'|'+grouped,html:()=>messageHTML(m,grouped)});previous=m;
  }
  if(S.older)add('newer','<button class="more-btn" data-action="bottom">Back to our latest moments ↓</button>');
  return items;
 }
 function messagesHTML(){return logItems().map(item=>item.html()).join('')}
 function primeLog(){const el=$('#messages');if(!el)return;const items=logItems();for(let i=0;i<items.length;i++){const node=el.children[i];if(node){node.dataset.logKey=items[i].key;renderSignatures.set(node,items[i].signature)}}}
-function messageHTML(m) {
-  const own = m.sender === S.user.id;
-  const reply = messageLookup.get(m.reply_to);
-  const reactions = reactionLookup.get(m.id)||[];
-  let status = receiptLabel(m, S.partner);
-  return `<article class="message ${own ? "own" : ""}" data-message="${esc(m.id)}"><span class="swipe-hint" aria-hidden="true">${icon('reply')}</span><div class="avatar ${own ? "" : "pair"}">${esc((own ? S.me?.name : S.partner?.name)?.[0] || "\u2661")}</div><div class="message-main"><div class="bubble ${m.deleted ? "removed" : ""}">${m.reply_to ? `<div class="quote"><strong>${reply?esc(reply.sender===S.user.id?'You':S.partner?.name||'Your person'):'Reply'}</strong>${reply && !reply.deleted ? (photoRecords.has(reply.id)?`<img class="quote-photo" data-photo-id="${esc(reply.id)}" alt="Photo in reply">`:"")+esc(reply.body.slice(0, 180)) : reply?.deleted?'This message was removed':'Earlier message'}</div>` : ""}${m.deleted ? "This message was removed" : (photoHTML(m)||linkify(m.body))}</div>${reactions.map((r) => `<button class="reaction" data-action="react-${m.id}" aria-label="Reaction ${r.emoji}">${r.emoji}</button>`).join("")}<div class="message-meta">${S.favorites.has(m.id) ? icon("bookmark") : ""}<span>${time(m.created_at)}${m.edited_at && !m.deleted ? " \xB7 edited" : ""}</span>${own?`<span class="receipt" data-receipt="${m.id}" data-status="${status}">${receiptHTML(m)}</span>`:''}</div></div>${m.deleted ? "" : `<div class="message-actions">${ib("bookmark", S.favorites.has(m.id) ? "Unsave message" : "Save to keepsakes", `save-${m.id}`, "quick-save")}${ib("more", "Message actions", `message-${m.id}`)}</div>`}</article>`;
-}
+function messageHTML(m,grouped=false){return chatView.messageHTML(m,grouped,{S,photoRecords,messageLookup,reactionLookup,receiptLabel,icon,esc,time,photoHTML,receiptHTML,ib,linkify})}
+
 function nearBottom() {
   const el = $("#messages");
   return autoScrollPending||!el || el.scrollHeight - el.scrollTop - el.clientHeight < 100;
@@ -450,16 +454,16 @@ function updateMessages(force){
   if(near&&!S.older)scrollBottom();else el.scrollTop=top;
   if((S.newMessages||(!near&&!S.older))&&!$('#jump'))$('.main').insertAdjacentHTML('beforeend','<button class="jump" id="jump" data-action="bottom">Latest little moments ↓</button>');
   if(near&&!S.older)requestAnimationFrame(receipt);
-  observePhotos();
+  updateReceipts();observePhotos();
  });
 }
 function replyHTML() {
   return S.reply || S.edit ? `<div class="reply-bar">${icon(S.edit ? "note" : "reply")}<div><b>${S.edit ? "Editing your message" : "Replying to " + esc(S.reply.sender === S.user.id ? "yourself" : S.partner?.name || "your person")}</b><br>${esc((S.edit || S.reply).body.slice(0, 110))}</div>${ib("close", "Cancel", "cancel-reply")}</div>` : "";
 }
 function beginReply(m){
- S.reply=m;S.edit=null;closeModal();
+ if(S.edit)draft=S.editDraft||'';S.reply=m;S.edit=null;closeModal();
  if(S.page!=='chat'){S.page='chat';render()}
- $('#reply-container').innerHTML=replyHTML();
+ $('#reply-container').innerHTML=replyHTML();$('#message-input').value=draft;
  $('#message-input').focus({preventScroll:true});
 }
 async function send() {
@@ -529,6 +533,7 @@ async function transmit(m) {
   } catch (error) {
     if(epoch!==sessionEpoch)return;
     const acknowledged=S.messages.find(x=>x.id===m.id&&isConfirmed(x)&&x.revision);
+    if(acknowledged&&!m.photoPending){stash();updateMessages();return}
     if(m.photoPending&&acknowledged&&photoRecords.get(m.id)?.sent){acknowledged.photoPending=false;acknowledged.transmitting=false;photoAPI?.removeDraft(S.user.id,m.id).catch(()=>{});stash();updateMessages();return}
     m.transmitting=false;
     m.pending = false;
@@ -538,16 +543,9 @@ async function transmit(m) {
     toast(m.photoPending?(error.message||'Photo upload failed. Tap retry.') : "Message wasn\u2019t sent. Tap retry when you\u2019re connected.");
   }
 }
-function keepsakesHTML() {
-  const list = mergeMessages(S.keepsakes||[],S.messages).filter((m) => S.favorites.has(m.id) && !m.deleted);
-  return `<section class="content-page"><div class="page-heading"><div class="eyebrow">THE WORDS WE WANT TO KEEP</div><h2 style="margin-top:15px">Little words. Big feelings.</h2><p>Your own collection of favorite messages. These stay here when you clear your chat.</p></div><div id="keepsake-list">${list.length ? list.map((m) => `<article class="note"><span class="eyebrow">${esc(m.sender === S.user.id ? "From you" : S.partner?.name || "Your person")}</span><div class="kept-photo">${photoHTML(m)||`<p>${linkify(m.body)}</p>`}</div><small>${date(m.created_at)} \xB7 ${time(m.created_at)}</small><button class="text-btn" style="float:right" data-action="save-${m.id}">Unsave \u2661</button></article>`).join("") : `<div class="empty">${icon("bookmark")}<h2>Some words are worth keeping.</h2><p>Save a message from your conversation<br>and find it here whenever you need it.</p><button class="secondary" data-action="page-chat">Back to our conversation</button></div>`}</div></section>`;
-}
-function settingsHTML() {
-  return `<section class="content-page"><div class="page-heading"><h2>Your little corner.</h2><p>A few thoughtful choices to make this space feel like you.</p></div><div class="settings-card"><h3>${icon("heart")} A familiar name</h3><label for="display-name">What your person calls you</label><input id="display-name" maxlength="40" value="${esc(S.me?.name)}"><button class="text-btn" style="margin-top:12px" data-action="save-name">Save name</button></div><div class="settings-card"><h3>Set the mood</h3><div class="theme-options"><button class="theme-option ${theme === "dark" ? "selected" : ""}" data-action="theme-dark"><div class="theme-preview"><i></i><i></i></div>Midnight Romance <span style="color:var(--accent)">${theme === "dark" ? "\u2713" : ""}</span></button><button class="theme-option ${theme === "light" ? "selected" : ""}" data-action="theme-light"><div class="theme-preview light"><i></i><i></i></div>Soft Love <span style="color:var(--accent)">${theme === "light" ? "\u2713" : ""}</span></button></div></div><div class="settings-card"><h3>A little hello, wherever you are</h3><p class="notification-copy">Private phone notifications show only “You have a new message.” On iPhone, add this site to your Home Screen first. Each device opts in separately.</p><button class="secondary" data-action="notifications">Manage phone notifications</button></div><div class="settings-card"><h3>Comfort & privacy</h3><div class="setting-row"><div><p>Let your person know you\u2019re here</p><small>Share your online status and typing activity.</small></div><button class="switch ${S.me?.share_presence ? "on" : ""}" role="switch" aria-checked="${!!S.me?.share_presence}" aria-label="Share online status" data-action="presence"></button></div><div class="setting-row"><div><p>A quiet, text-first space</p><small>No trackers. Photos download only when needed. Notification previews never include your messages. Messages are protected by account access, but are not end-to-end encrypted.</small></div>${icon("lock")}</div></div><div class="settings-card"><div class="setting-row"><div><p>Clear my chat</p><small>A fresh page for you. Your partner\u2019s chat stays untouched.<br>Your keepsakes stay saved.</small></div><button class="text-btn danger" data-action="clear">Clear chat</button></div></div><button class="secondary" data-action="logout">${S.demo ? "Leave sample" : "Sign out of this device"}</button></section>`;
-}
-function aboutHTML() {
-  return `<section class="content-page"><div class="welcome-moment" style="margin-top:45px"><span class="mini-heart">${icon("spark")}</span><h2>Just us. And all our little moments.</h2><p>No noise. No feeds. No audience.<br>A place to be entirely yourselves.</p></div><div class="settings-card"><h3>A universe made for two</h3><div class="setting-row"><div class="brand"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div>${esc(S.me?.name)}<small class="muted" style="display:block;margin-top:5px">Your corner</small></div></div>${icon("heart")}<div class="brand"><div class="avatar pair">${esc(S.partner?.name?.[0] || "\u2661")}</div><div>${esc(S.partner?.name || "Your person")}<small class="muted" style="display:block;margin-top:5px">${S.partner ? "Their corner" : "Invitation waiting"}</small></div></div></div></div><article class="note"><span class="eyebrow">A LITTLE REMINDER</span><p>\u201CLove is in the ordinary things.<br>The checking in. The listening.<br>The choosing each other, again.\u201D</p></article><button class="primary" data-action="page-chat">Back to your person ${icon("arrow")}</button></section>`;
-}
+
+
+
 async function save(m) {
   const exists = S.favorites.has(m.id);
   try {
@@ -563,15 +561,22 @@ async function save(m) {
     toast("Couldn\u2019t update your keepsakes. Please try again.");
   }
 }
-function messageMenu(m) {
-  modal(`<h2>A little moment.</h2><div class="reaction-picker">${["\u2764\uFE0F", "\u{1F979}", "\u2728", "\u{1F602}", "\u{1F48B}"].map((e) => `<button data-action="reaction-${m.id}" data-emoji="${e}" aria-label="React ${e}">${e}</button>`).join("")}</div><div class="action-list"><button data-action="reply-${m.id}">\u21A9 Reply to this message</button><button data-action="save-${m.id}">\u2661 ${S.favorites.has(m.id) ? "Remove from keepsakes" : "Save to keepsakes"}</button><button data-action="copy-${m.id}">Copy message</button>${m.sender === S.user.id ? `<button data-action="edit-${m.id}">Edit my message</button><button class="danger" data-action="delete-${m.id}">Remove for both of us\u2026</button>` : ""}<button class="danger" data-action="hide-${m.id}">Delete only for me\u2026</button></div>`);
-}
+async function messageMenu(m){modal((await import('./dialogs.js')).messageDialog(m,pageContext()))}
+
 async function changeSettings() {
   if (S.demo) return;
   const { error } = await db.rpc("universe_profile", { display_name: S.me.name, presence: S.me.share_presence, selected_theme: theme });
   if (error) throw error;
 }
+function prepareDraft(text){draft=(draft?draft+'\n\n'+String(text):String(text)).slice(0,8000);S.page='chat';S.reply=S.edit=null;closeModal();render();stash();$('#message-input')?.focus({preventScroll:true});scrollBottom()}
 async function action(a, el) {
+ if(['options','privacy','clear','emoji','search'].includes(a)){modal((await import('./dialogs.js')).dialogHTML(a,pageContext()));if(a==='search')$('#search-input').focus();return}
+
+  if(a==='ritual-next'){const views=await secondaryPages();views.nextDate();const card=$('.date-card');if(card){card.outerHTML=views.dateCardHTML(pageContext());$('.date-card [data-action="ritual-next"]')?.focus({preventScroll:true})}return}
+  if(a==='ritual-invite'){prepareDraft((await secondaryPages()).todayDate().invite);return}
+  if(a==='little-notes'){const notes=(await secondaryPages()).notes();modal(`<h2>A little “thinking of you.”</h2><p>Choose a note to make your own. Nothing sends automatically.</p><div class="action-list">${notes.map((n,i)=>`<button class="note-draft" data-action="note-draft-${i}">${esc(n)}</button>`).join('')}</div>`);return}
+  if(a.startsWith('note-draft-')){prepareDraft((await secondaryPages()).notes()[Number(a.slice(11))]);return}
+
   if(a==='attach-photo'){
    if(S.demo){toast('Sign in to share a private photo.');return}
    await photos();modal(`<h2>A little moment, shared.</h2><p>Photos are compressed on your device before they leave it.</p><div class="action-list"><button data-action="photo-gallery">Choose from gallery</button><button data-action="photo-camera">Take a photo</button></div><input type="file" id="photo-gallery" accept="image/*" hidden><input type="file" id="photo-camera" accept="image/*" capture="environment" hidden>`);return;
@@ -584,7 +589,7 @@ async function action(a, el) {
    try{await api.saveDraft(S.user.id,m,photo)}catch(error){el.disabled=false;throw error}api.takePreview();try{localStorage.setItem('universe-photo-pending-'+S.user.id,'1')}catch{}
    photoRecords.set(m.id,{id:m.id,width:photo.width,height:photo.height});api.localThumb(m.id,photo.thumb);S.messages.push(m);S.reply=null;$('#reply-container').innerHTML='';closeModal();flushStash();updateMessages(true);await transmit(m);return;
   }
-  if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
+  if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();dialogOpener=document.activeElement;$('#app').inert=true;await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
   if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession);else await restoreSession()}finally{el.disabled=false}return}
   if(a==='notifications'){
    if(S.demo){toast('Sign in to enable private notifications.');return}
@@ -598,7 +603,7 @@ async function action(a, el) {
     return;
   }
   if (a === "demo") {
-    sample();
+    await sample();
     return;
   }
   if (a === "invite-mode") {
@@ -638,7 +643,7 @@ async function action(a, el) {
     return;
   }
   if (a.startsWith("page-")) {
-    S.page = a.slice(5);
+    S.page = a.slice(5);const at=sessionEpoch;if(['settings','keepsakes','about'].includes(S.page))await secondaryPages();if(at!==sessionEpoch)return;
     if (S.page === "keepsakes" && !S.demo && S.favorites.size) {
       const { data, error } = await db.from("universe_messages").select("*").in("id", [...S.favorites]);
       if (error) {
@@ -652,18 +657,6 @@ async function action(a, el) {
       scrollBottom();
       receipt();
     }
-    return;
-  }
-  if (a === "options") {
-    modal(`<h2>Our conversation.</h2><div class="action-list"><button data-action="page-keepsakes">\u2661 Visit your keepsakes</button><button data-action="page-settings">Appearance & privacy</button><button class="danger" data-action="clear">Clear my chat\u2026</button><button data-action="privacy">About our privacy</button></div>`);
-    return;
-  }
-  if (a === "privacy") {
-    modal("<h2>A little trust.</h2><p>Only the two invited accounts can read this conversation. Messages are stored in your private database and sent over HTTPS. They are <b>not end-to-end encrypted</b>; service administrators can access stored data.</p><p>Sign out on shared devices. Clear Chat hides earlier messages only for your account; it does not erase them from the database or your partner\u2019s chat. Saved keepsakes remain accessible to you.</p>");
-    return;
-  }
-  if (a === "clear") {
-    modal(`<h2>A fresh page, just for you?</h2><p>This clears earlier messages from <b>your view on all your devices</b>. Your partner\u2019s conversation won\u2019t change, and they won\u2019t be notified.</p><p>Your saved keepsakes stay in Keepsakes. New messages will appear as usual. You can\u2019t undo this.</p><div class="modal-actions"><button class="secondary" data-action="close-modal">Keep our chat</button><button class="primary" data-action="confirm-clear">Clear my chat</button></div>`);
     return;
   }
   if (a === "confirm-clear") {
@@ -714,10 +707,9 @@ async function action(a, el) {
     return;
   }
   if (a === "cancel-reply") {
-    S.reply = S.edit = null;
-    draft = "";
-    $("#message-input").value = "";
-    $("#reply-container").innerHTML = "";
+    if(S.edit)draft=S.editDraft||'';S.reply = S.edit = null;
+    $("#message-input").value = draft;
+    $("#reply-container").innerHTML = "";stash();
     return;
   }
   if (a === "bottom") {
@@ -730,11 +722,11 @@ async function action(a, el) {
   if (a === "older") {
     if (loadingOlder) return;
     loadingOlder = true;
-    const view = $("#messages"), height = view.scrollHeight, top = view.scrollTop;
+    const view = $("#messages"), height = view.scrollHeight, top = view.scrollTop;const anchor=[...view.querySelectorAll("[data-message]")].find(e=>e.getBoundingClientRect().bottom>view.getBoundingClientRect().top),anchorId=anchor?.dataset.message,anchorTop=anchor?.getBoundingClientRect().top;
     try {
       await loadMessages(Math.min(...S.messages.filter((m2) => !m2.pending && !m2.failed).map((m2) => m2.seq)));
       updateMessages(false);
-      view.scrollTop = top + view.scrollHeight - height;
+      requestAnimationFrame(()=>{const kept=[...view.querySelectorAll("[data-message]")].find(e=>e.dataset.message===anchorId);view.scrollTop=kept&&anchorTop!==undefined?view.scrollTop+kept.getBoundingClientRect().top-anchorTop:top+view.scrollHeight-height});
     } catch {
       toast("Couldn\u2019t load earlier messages. Try again.");
     } finally {
@@ -742,26 +734,17 @@ async function action(a, el) {
     }
     return;
   }
-  if (a === "emoji") {
-    modal(`<h2>A little feeling.</h2><div class="reaction-picker">${["\u2764\uFE0F", "\u{1F979}", "\u2728", "\u{1F602}", "\u{1F48B}"].map((e) => `<button data-action="insert-emoji" data-emoji="${e}">${e}</button>`).join("")}</div>`);
-    return;
-  }
   if (a === "insert-emoji") {
-    draft+=el.dataset.emoji;stash();
+    const ta=$('#message-input'),pos=ta?.selectionStart??draft.length,end=ta?.selectionEnd??pos;draft=draft.slice(0,pos)+el.dataset.emoji+draft.slice(end);stash();
     closeModal();
     $("#message-input").value = draft;
-    $("#message-input").focus();
-    return;
-  }
-  if (a === "search") {
-    modal('<h2>Find a little moment.</h2><p>Search the messages currently loaded in this conversation. Load earlier moments to include more.</p><input id="search-input" type="search" placeholder="A word, a feeling, a memory\u2026" aria-label="Search loaded messages"><div id="search-results"></div>');
-    $("#search-input").focus();
+    $("#message-input").focus();$("#message-input").setSelectionRange(pos+el.dataset.emoji.length,pos+el.dataset.emoji.length);
     return;
   }
   const prefix = a.slice(0, a.indexOf("-")), id = a.slice(a.indexOf("-") + 1), m = S.messages.find((m2) => m2.id === id);
   if (!m) return;
   if (prefix === "message" || prefix === "react") {
-    messageMenu(m);
+    await messageMenu(m);
     return;
   }
   if (prefix === "retry") {
@@ -785,7 +768,7 @@ async function action(a, el) {
   }
   if (prefix === "reply" || prefix === "edit") {
     if(prefix==='reply'){beginReply(m);return}
-    S.page = "chat";
+    S.page = "chat";S.editDraft=draft;
     S.reply = prefix === "reply" ? m : null;
     S.edit = prefix === "edit" ? m : null;
     if (S.edit) draft = m.body;
@@ -874,7 +857,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 document.addEventListener('visibilitychange',()=>{
- if(!S.user||S.demo)return;
+ document.body.classList.toggle('app-hidden',document.hidden);if(!S.user||S.demo)return;
  if(document.hidden){flushStash();hiddenPause=setTimeout(()=>{if(document.hidden)stop()},30000)}
  else{clearTimeout(hiddenPause);if(!channel)startRealtime();else refresh()}
 });
@@ -895,9 +878,9 @@ if(window.visualViewport){const resize=()=>{if(visualViewport.scale===1)document
 
 document.addEventListener('change',async event=>{
  if(!['photo-gallery','photo-camera'].includes(event.target.id)||!event.target.files?.[0])return;
- const file=event.target.files[0],epoch=sessionEpoch;
+ const file=event.target.files[0],epoch=sessionEpoch,selection=++photoSelection;
  modal('<h2>A little less data.</h2><p role="status">Preparing your photo on this device…</p>');
- try{const api=await photos(),photo=await api.prepare(file);if(epoch!==sessionEpoch)return;
+ try{const api=await photos();if(epoch!==sessionEpoch||selection!==photoSelection)return;const photo=await api.prepare(file);if(epoch!==sessionEpoch||selection!==photoSelection){api.cancelPreview();return}
   modal(`<h2>A moment for your person.</h2><img class="photo-preview" src="${photo.url}" alt="Photo preview"><p class="photo-detail">${Math.round(photo.originalBytes/1024)} KB → ${Math.round((photo.full.size+photo.thumb.size)/1024)} KB · ${photo.width} × ${photo.height}<br>Private. Compressed here. Original camera metadata removed.</p><label for="photo-caption">A little caption (optional)</label><input id="photo-caption" maxlength="1000" placeholder="Tell the story behind it…"><div class="modal-actions"><button class="secondary" data-action="close-modal">Cancel</button><button class="primary" data-action="send-photo">Send photo ${icon('send')}</button></div>`);
- }catch(error){if(epoch===sessionEpoch&&$('#modal-root').children.length){closeModal();toast(error.message)}}
+ }catch(error){if(epoch===sessionEpoch&&selection===photoSelection&&$('#modal-root').children.length){closeModal();toast(error.message)}}
 });

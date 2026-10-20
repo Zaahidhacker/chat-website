@@ -10,13 +10,18 @@ export function explainError(error) {
 // Never retry enrollment, and never turn a rejected password into a retry loop.
 export async function resilientFetch(input, init) {
  const url = String(input instanceof Request ? input.url : input);
- const method = (init?.method || 'GET').toUpperCase();
+ const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
  const safe = !url.includes('/auth/') && (method === 'GET' || /\/rpc\/universe_(sync_state|receipt|send)$/.test(url));
  for (let attempt = 0; ; attempt++) {
-  try { return await fetch(input, init); }
+  const controller=new AbortController(),source=init?.signal||(input instanceof Request?input.signal:null);
+  const abort=()=>controller.abort(source.reason);
+  if(source?.aborted)abort();else source?.addEventListener('abort',abort,{once:true});
+  const timer=setTimeout(()=>controller.abort(new DOMException('Connection timed out.','TimeoutError')),30000);
+  try { return await fetch(input instanceof Request?input.clone():input,{...init,signal:controller.signal}); }
   catch (error) {
-   if (!safe || attempt || !navigator.onLine || init?.signal?.aborted) throw error;
-   await new Promise(resolve => setTimeout(resolve, 250));
+   if (!safe || attempt || !navigator.onLine || source?.aborted) throw error;
   }
+  finally{clearTimeout(timer);source?.removeEventListener('abort',abort)}
+  await new Promise(resolve => setTimeout(resolve, 250));
  }
 }
