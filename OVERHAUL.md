@@ -53,7 +53,7 @@ Known-good prior release: commit `7a0fcc15f9a090d81dce6011dc0e2397afd761ba`, dep
 
 ## Verification and limits
 
-The build enforces **25,000 bytes gzip** for initial JavaScript and CSS; this release uses **24,923 bytes**. Fonts and optional feature assets load separately and are cached. No purchased service is needed, but shared Supabase/Vercel/GitHub free quotas and OpenStreetMap fair-use/availability policies still apply.
+The build enforces **25,000 bytes gzip** for initial JavaScript and CSS; this release uses **24,932 bytes**. Fonts and optional feature assets load separately and are cached. No purchased service is needed, but shared Supabase/Vercel/GitHub free quotas and OpenStreetMap fair-use/availability policies still apply.
 
 The full checks include unit tests and the messaging, upgrade, photo/garden, island, clickable-link, location and new-overhaul browser suites. New checks cover presence privacy/expiry, receipt node preservation, unseen activity off-chat, draft safety, dialog focus, daily invitations, offline Firefly play, per-device best scores, hidden activity pausing, 320–1440 pixel themes, photo preparation cancellation and optional memory peeks without extra rewards. Existing tests cover two isolated account contexts, reconnects, lost responses, slow networks, 6× CPU throttling, Storage access denial, private service-worker handlers and location permission/consent failures.
 

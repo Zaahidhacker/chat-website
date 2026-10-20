@@ -33,7 +33,7 @@ let messageLookup=new Map(),reactionLookup=new Map(),autoScrollPending=false;
 let replyContext=new Map(), resumeSession=null;
 let ritualGame,pageViews,photoAPI,garden,island,locationAPI,photoRecords=new Map();
 function pageContext(){return {S,theme,esc,icon,date,time,photoHTML,mergeMessages,linkify}}
-async function secondaryPages(){return pageViews??=await import('./pages.js')}
+async function secondaryPages(){return pageViews??=await import('./pages.js').then(async v=>{await v.ready;return v})}
 const secondaryPlaceholder=()=>'<section class="content-page"><div class="page-skeleton" role="status">Opening your little corner…</div></section>';
 async function photos(){photoAPI=await import('./photos.js');photoAPI.configure(db,S.user?.id);return photoAPI}
 async function loadPhotos(messages,epoch=sessionEpoch){

@@ -1,5 +1,5 @@
 import {dateFor,littleNotes} from './ritual-content.js';
-if(!document.querySelector('[data-pages-styles]')){const l=document.createElement('link');l.rel='stylesheet';l.href=PAGES_STYLE_URL;l.dataset.pagesStyles='';document.head.append(l)}
+export const ready=new Promise(resolve=>{const old=document.querySelector('[data-pages-styles]');if(old?.sheet){resolve();return}const l=old||document.createElement('link'),timer=setTimeout(resolve,8000),done=()=>{clearTimeout(timer);resolve()};l.addEventListener('load',done,{once:true});l.addEventListener('error',done,{once:true});if(!old){l.rel='stylesheet';l.href=PAGES_STYLE_URL;l.dataset.pagesStyles='';document.head.append(l)}});
 let ritualOffset=0;
 export function nextDate(){ritualOffset++}
 export function notes(){return littleNotes}
