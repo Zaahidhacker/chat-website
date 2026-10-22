@@ -22,6 +22,10 @@ npm run test:overhaul
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
 
+Optional design MCP setup and the Roseglass visual system are documented in
+[DESIGN-TOOLS.md](DESIGN-TOOLS.md). These tools are development-only and never
+receive private chat data or load in the deployed website.
+
 ## Messaging and efficiency
 
 - Immediate local message feedback, stable UUID retries, authoritative server order and timestamps.

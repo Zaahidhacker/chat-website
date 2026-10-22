@@ -106,3 +106,47 @@ The new coverage verifies privacy-aware Online/Last seen, receipt transitions pr
 Initial JavaScript/CSS is **24,932 bytes gzip**, under the existing 25,000-byte guard. On a controlled 6× CPU phone: optimistic message paint **170 ms**, ritual switching **201 ms**, garden card paint **29 ms**, island memory paint **35 ms**, map interaction **206 ms**. Slow cold login at 1.6 Mbps and 150 ms emulated latency was **1,857 ms**, about **73 KB encoded resource bodies** including fonts. These are local Chromium measurements; they do not establish internet delivery speed, physical-device battery consumption or Safari behavior.
 
 A fresh private row/object-metadata backup was verified before the overhaul. Read-only live comparison found **989/989 messages, 9/9 photos, 18/18 storage object metadata records, 2/2 account identities and member bindings, both preferences, two favorites and six reactions unchanged**. All seven garden events, one answer, eighteen island completions, inventory, placements, wallet and surprise-note data matched. No real content, account or progress records were written during development; no restore or reset was necessary. Photo bytes were never modified and are not copied into the metadata snapshot. See [OVERHAUL.md](OVERHAUL.md) for changes, preservation/rollback details and verification limits.
+
+### Roseglass redesign — 22 October 2026
+
+The frontend now uses inset desktop panels, layered translucent plum/rose surfaces,
+baby-pink accents, compact texting bubbles, a highlighted photo attachment control,
+and consistent card treatments across the world, garden, island, settings and
+location pages. On phones the conversation fills the viewport. Glass blur is
+limited to the header, composer and open dialogs, with a non-filter fallback.
+Short opacity/transform entrances respect reduced motion and the existing hidden
+page pause. No heavy animation runtime or media downloads were added.
+
+All **40 unit cases and 107 existing browser scenarios pass** against controlled
+Supabase transports. Additional visual checks covered login widths and ten chat
+width/theme combinations (320, 360, 390, 768 and 1440 pixels), composer visibility,
+horizontal overflow and reduced motion. Fictional screenshots were inspected for
+desktop/mobile chat, the world hub and login. Tests caught and corrected the
+closed mobile drawer's inherited shadow. The dialog test now waits for its lazy
+dialog to appear before asserting inert background content, avoiding a race with
+module loading under parallel CPU load.
+
+Initial JavaScript plus CSS is **24,905 bytes gzip**, below the unchanged 25,000
+byte guard. Controlled 6× CPU optimistic message paint measured **141 ms**; slow
+cold login with 150 ms latency and 1.6 Mbps measured **2,237 ms**. These local
+measurements do not establish performance on every physical phone. Production
+dependency audit: zero reported vulnerabilities.
+
+Preservation is structural for this release: no application JavaScript, SQL,
+account settings, storage objects or live personal-data records were changed.
+No database commands or migrations ran, and no backup was restored over active
+conversations. Browser tests used fictional records exclusively. Existing games,
+photo sharing, link detection, presence and opt-in locations retain their logic.
+
+The requested After Effects MCP was cloned, built and checked through MCP
+initialization, tool listing (102 tools), and its animation prompt. Adobe rendering
+requires a Windows/macOS desktop with After Effects and CEP; it is unavailable on
+this Linux executor. Stitch is configured using an environment-backed API header,
+but its host remains blocked by the enforced network policy, so no Stitch design
+generation is claimed. Neither design tool nor any design credential ships in
+the browser. See DESIGN-TOOLS.md for setup and limitations.
+
+Rollback baseline: commit `167726feefbbbf92d9622442f5b3ebf6cf67bcc6`, production
+deployment `dpl_5CAUrVaCxoY17TUWCaAD5azKSTnd`. A frontend rollback needs no data
+rollback. Live two-account internet testing, physical battery behavior and iPhone
+Safari remain unverified in this workspace.
