@@ -1,3 +1,4 @@
+export {secretMessage,closeSecret} from './heart-secret.js';
 export {presenceLabel} from './presence.js';
 export function receiptHTML(m,status){
 

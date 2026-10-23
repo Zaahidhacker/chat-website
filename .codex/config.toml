@@ -1,4 +1,4 @@
-# Design tools only. Never copy this configuration into browser code.
+# Development-only design tools. No tool credentials ship to the website.
 [mcp_servers.stitch]
 url = "https://stitch.googleapis.com/mcp"
 env_http_headers = { "X-Goog-Api-Key" = "STITCH_API_KEY" }
@@ -6,3 +6,6 @@ env_http_headers = { "X-Goog-Api-Key" = "STITCH_API_KEY" }
 [mcp_servers.after_effects]
 command = "node"
 args = ["work/after-effects-mcp/dist/index.js"]
+
+[mcp_servers.motion]
+url = "https://mcp.motion.dev"

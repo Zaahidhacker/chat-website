@@ -150,3 +150,44 @@ Rollback baseline: commit `167726feefbbbf92d9622442f5b3ebf6cf67bcc6`, production
 deployment `dpl_5CAUrVaCxoY17TUWCaAD5azKSTnd`. A frontend rollback needs no data
 rollback. Live two-account internet testing, physical battery behavior and iPhone
 Safari remain unverified in this workspace.
+
+
+### Three Hearts Secret — 23 October 2026
+
+Implemented a lazy-loaded eight-second Motion sequence for a complete run of
+`❤️❤️❤️` in a newly confirmed message. Realtime INSERTs, sender acknowledgement
+and the existing revision replay share an account-scoped consumed-ID gate. A
+canonical server timestamp plus a 900 ms lead aligns both timelines; delayed
+clients seek into the current phase. Old history, edits and longer heart runs
+do not trigger. No new database table, function, migration, channel, broadcast
+or network polling was introduced. No real message, photo, account, preference
+or game/progress record was written, reset, deleted or restored.
+
+**45 unit cases and 121 controlled browser scenarios pass**, including fourteen
+new two-client scene scenarios. They verify desktop-to-phone and phone-to-desktop
+delivery, an intentionally delayed scene import, continued ordinary-message
+delivery during the effect, Skip/Escape locality, reading-position/draft/node
+and focus preservation, repeat/reload suppression, reduced motion, failed-send
+retry, automatic ending, background cleanup, overlapping triggers, short
+realtime interruption recovery, small portrait/landscape layouts, 6× CPU, pending
+import cancellation on sign-out, a blocked Motion chunk fallback and enabling
+reduced motion during loading. The scroll test captures the real reading position
+before triggering, rather than changing scroll under an active modal with a
+pending ordinary-message scroll frame.
+
+In local Chromium, the delayed client's timeline differed by approximately
+**10 ms**; the 6× CPU phone's measured 90th-percentile frame interval
+was **33.3 ms**. These controlled measurements are not physical-phone or internet
+guarantees. Real iPhone Safari, battery use and two authenticated physical-phone
+production synchronization remain device checks; outbound policy blocks direct
+production/Supabase browser transport from this workspace. The native Vercel
+connector is used to check deployment state and delivery of the built assets.
+
+Initial JavaScript/CSS: **24,958 bytes gzip**, under the unchanged 25,000-byte
+guard. The Motion adapter is 24,527 bytes gzip; its implementation, scene CSS
+and local handwritten font are lazy. No animation/font API or paid subscription
+is used by the deployed site. Production dependency audit: zero reported
+vulnerabilities. The installed official Motion AI Kit local best practices
+guide the vanilla DOM timelines, soft springs, compositor-friendly motion and
+reduced-motion behavior. See [THREE-HEARTS.md](THREE-HEARTS.md) for behavior, timing,
+free tooling, constraints and the pre-feature rollback deployment.

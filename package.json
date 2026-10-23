@@ -13,13 +13,16 @@
     "test:island": "node tests/island-browser.mjs",
     "test:links": "node tests/links-browser.mjs",
     "test:location": "node tests/location-browser.mjs",
-    "test:overhaul": "node tests/overhaul-browser.mjs"
+    "test:overhaul": "node tests/overhaul-browser.mjs",
+    "test:hearts": "node tests/hearts-browser.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",
+    "@fontsource/allura": "5.3.0",
     "@fontsource/cormorant-garamond": "5.3.0",
     "@supabase/supabase-js": "2.58.0",
-    "leaflet": "1.9.4"
+    "leaflet": "1.9.4",
+    "motion": "14.6.0"
   },
   "devDependencies": {
     "esbuild": "0.25.10",

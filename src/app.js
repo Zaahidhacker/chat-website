@@ -105,7 +105,7 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
- ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
+ chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
@@ -259,6 +259,7 @@ async function refresh(){
   while(syncCursor<target){
    const {data,error:deltaError}=await db.from('universe_messages').select('*').gt('revision',syncCursor).lte('revision',target).order('revision',{ascending:true}).limit(100);
    if(epoch!==sessionEpoch)return;if(deltaError)throw deltaError;
+   for(const m of data)if(!S.messages.some(x=>x.id===m.id))chatView.secretMessage(m,S.user.id);
    applyIncoming(data);
    await loadPhotos(data.filter(m=>m.body.startsWith('📷 ')||photoRecords.has(m.id)),epoch);
    syncCursor=data.length?Math.max(syncCursor,...data.map(m=>m.revision)):target;
@@ -285,7 +286,7 @@ function startRealtime(){
  })
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_messages'},payload=>{
   if(epoch!==sessionEpoch||!payload.new?.id)return;
-  const near=nearBottom();applyIncoming([payload.new]);stash();updateMessages(near&&!S.older);receipt();
+  const near=nearBottom();applyIncoming([payload.new]);if(payload.eventType==='INSERT')chatView.secretMessage(payload.new,S.user.id);stash();updateMessages(near&&!S.older);receipt();
   if(payload.new.body?.startsWith('📷 '))loadPhotos([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
   if(replyContext.has(payload.new.id))replyContext.set(payload.new.id,payload.new);
   if(payload.new.reply_to)loadReplyContext([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
@@ -527,7 +528,7 @@ async function transmit(m) {
     const { data, error } = await db.rpc("universe_send", { mid: m.id, content: m.body, reply: m.reply_to });
     if(epoch!==sessionEpoch)return;
     if (error) throw error;
-    applyIncoming([{...data,transmitting:false}]);
+    applyIncoming([{...data,transmitting:false}]);chatView.secretMessage(data,S.user.id);
     stash();
     updateMessages(true);
   } catch (error) {

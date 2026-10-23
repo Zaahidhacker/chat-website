@@ -18,6 +18,7 @@ npm run test:island
 npm run test:links
 npm run test:location
 npm run test:overhaul
+npm run test:hearts
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -25,6 +26,9 @@ The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets h
 Optional design MCP setup and the Roseglass visual system are documented in
 [DESIGN-TOOLS.md](DESIGN-TOOLS.md). These tools are development-only and never
 receive private chat data or load in the deployed website.
+
+The [Three Hearts Secret](THREE-HEARTS.md) adds a synchronized, optional romantic
+scene for fresh `❤️❤️❤️` messages, with Skip, reduced motion and lazy-loaded Motion.
 
 ## Messaging and efficiency
 
