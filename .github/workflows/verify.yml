@@ -27,3 +27,4 @@ jobs:
       - run: npm run test:location
       - run: npm run test:overhaul
       - run: npm run test:hearts
+      - run: npm run test:project28

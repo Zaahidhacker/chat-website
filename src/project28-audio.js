@@ -1,0 +1,6 @@
+export function soundtrack(url,onError){
+ const audio=new Audio();audio.preload='none';audio.loop=true;audio.src=url;let timer,ended=false,muted=true,desired=.32;try{muted=localStorage.getItem('p28-muted')==='true'}catch{}
+ function fade(to){clearInterval(timer);const from=audio.volume,start=performance.now();timer=setInterval(()=>{const t=Math.min(1,(performance.now()-start)/900);audio.volume=from+(to-from)*t;if(t===1)clearInterval(timer)},40)}
+ audio.onerror=()=>onError('The soundtrack is unavailable. You can continue in quiet.');
+ return {async start(){if(ended)return;audio.volume=0;audio.muted=muted;try{await audio.play();if(ended){audio.pause();return}fade(desired)}catch{if(ended)return;onError('Tap Sound to try the soundtrack, or continue in quiet.')}},toggle(){if(audio.paused&&!muted){this.start();return true}muted=!muted;audio.muted=muted;try{localStorage.setItem('p28-muted',String(muted))}catch{}if(!muted)this.start();return !muted},duck(value){desired=typeof value==='number'?value:value?.08:.32;fade(desired)},pause(){audio.pause();clearInterval(timer)},resume(){if(!muted)this.start()},dispose(){ended=true;audio.onerror=null;fade(0);setTimeout(()=>{clearInterval(timer);audio.pause();audio.removeAttribute('src');audio.load()},950)}};
+}

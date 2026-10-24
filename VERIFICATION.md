@@ -191,3 +191,56 @@ vulnerabilities. The installed official Motion AI Kit local best practices
 guide the vanilla DOM timelines, soft springs, compositor-friendly motion and
 reduced-motion behavior. See [THREE-HEARTS.md](THREE-HEARTS.md) for behavior, timing,
 free tooling, constraints and the pre-feature rollback deployment.
+
+
+### Project 28 — 25 October 2026, Asia/Colombo
+
+Seven owner-released anniversary scenes are integrated into the existing chat: quiet
+reveal, Pip/portal, four editable constellation memories, three skippable games,
+private editable letter/voice, permanent garden and celestial finale. The studio
+uses the established member slots (owner 1, recipient 2), confirmed against live
+membership and the actual sync-state function. No separate site or stack was made.
+
+A private mode-0600 JSON row/object-metadata backup was created and SHA-256 verified
+before the additive migration. Post-migration comparisons found all **3,489
+message rows, 18 photo records, 36 storage object metadata records and both account
+identities unchanged**. Three favorites, twenty reactions, seventeen garden
+events, twenty-two island completions, inventory, placements, wallet and surprise
+data also match. Photo bytes were not exported or modified. No restore/reset ran.
+
+Live SQL transactions under authenticated owner/recipient/outsider and anonymous
+roles passed release/date visibility, owner-only updates, private-asset date gates,
+upload-path ownership, sealed-body/direct-read denial, and capsule RPC outsider
+and anonymous denial. All test rows/objects and release changes rolled back.
+The real configuration remains **released=false**, opening no earlier than
+2026-10-25 00:00 Asia/Colombo; later owner release remains valid.
+
+**47 unit cases and 126 controlled browser scenarios pass** across the existing
+suites and five Project 28 journeys. Coverage includes owner editing and preview
+isolation, every scene and game, nickname/long letter, four memories, 28 reasons,
+release/resume/completion, backend garden data, sealed metadata, idempotent hug,
+return to unchanged chat, worker photo preparation, signed chapter images, native
+voice playback, same-song upload plumbing, phone/tablet/desktop sizing, reduced
+motion including pseudo-elements, and 6x CPU garden interaction. Local garden
+interaction measured **182 ms** at 6x CPU. Tests use fictional data and controlled HTTP,
+WebSocket and storage transports. Synthetic PNG/WAV fixtures do not verify the
+actual supplied song. Desktop/phone rendered screenshots were inspected.
+
+Messages arriving beneath the cinematic remain delivered but unread until chat
+is visible again. Read-receipt regression checks pass. Existing three-hearts
+effects do not overlap the anniversary overlay. The old three-hearts viewport
+test now checks actual document overflow, since its clipped decorative light
+textures may deliberately exceed the overlay's internal scroll bounds.
+
+Initial JS/CSS is **24,986 bytes gzip**, below the unchanged 25,000-byte guard.
+Journey code/style and local handwriting load only for an authorized configuration.
+No new dependency or paid service is added. Production dependency audit reports
+zero vulnerabilities. The capsule RPC's intentional guarded SECURITY DEFINER
+advisory and its authorization rationale are documented in PROJECT28.md.
+
+Actual soundtrack availability/MIME/range behavior, Safari/iPhone volume behavior,
+physical battery use and live authenticated two-phone production transport remain
+unverified because of environment network/device limits. The exact soundtrack
+URL is retained and a private same-song upload fallback exists; unavailability
+never blocks the story. The owner must personalize, preview and check sound on
+a phone before manually releasing. See [PROJECT28.md](PROJECT28.md).

@@ -19,6 +19,7 @@ npm run test:links
 npm run test:location
 npm run test:overhaul
 npm run test:hearts
+npm run test:project28
 ```
 
 The build enforces a 25 KB gzip budget for initial JavaScript plus CSS. Assets have content hashes and long-lived cache headers. Only the public application shell is cached; auth and message responses are never stored by the service worker.
@@ -110,3 +111,7 @@ Opt-in location sharing uses browser GPS, private Supabase latest-point records 
 ## The polished little world
 
 The header now shows privacy-controlled Online/Last seen from existing activity timestamps; online can take roughly a minute to expire. Receipt transitions preserve bubbles, unread activity appears away from chat, replies keep drafts on cancellation, and photo preparation can be canceled safely. **Our little world** includes daily date ideas, unsent romantic note drafts, Firefly Trail and an optional pocket breathing pause. Existing garden/island games have clearer feedback, optional memory peeks and more consistent controls. New activities make no database requests. See [OVERHAUL.md](OVERHAUL.md) for the complete changes, preservation baseline, performance and verification limits. No database migration accompanies this release.
+
+Project 28 is an owner-released anniversary journey inside this application. See
+[PROJECT28.md](PROJECT28.md) for the studio, personalization, safe release, private
+storage, tests and known soundtrack/device limits. It ships unreleased.

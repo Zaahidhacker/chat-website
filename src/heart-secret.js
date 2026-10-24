@@ -5,7 +5,7 @@ export function closeSecret(){generation++;dispose?.();dispose=null}
 export function secretMessage(message,user){
  const event=gate.accept(message,user);if(!event)return;
  closeSecret();const ticket=generation;
- if(document.hidden)return;
+ if(document.hidden||document.querySelector('.p28'))return;
  import('./heart-secret-scene.js').then(async scene=>{
   if(ticket!==generation)return;
   const cleanup=await scene.showSecret({...event,current:()=>ticket===generation&&!document.hidden,onFinish:()=>{if(ticket===generation)dispose=null}});

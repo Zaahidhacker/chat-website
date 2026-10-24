@@ -105,7 +105,7 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
- chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
+ chatView?.stopProject28();chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
@@ -180,7 +180,7 @@ async function enter(session){
    const api=await photos(),rows=await api.loadDrafts(S.user.id);if(epoch!==sessionEpoch)return;
    for(const row of rows){if(!S.messages.some(m=>m.id===row.message.id))S.messages.push({...row.message,pending:false,failed:true,transmitting:false});photoRecords.set(row.message.id,{id:row.message.id,width:row.photo.width,height:row.photo.height});api.localThumb(row.message.id,row.photo.thumb)}
   }
-  S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
+  S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();chatView.project28(db,S,receipt);setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
  }catch(error){
   if(epoch!==sessionEpoch)return;
   S.loading=false;
@@ -337,7 +337,7 @@ function updateStatus(){
 }
 function receipt(){
  if(S.demo||!S.user||document.hidden||!navigator.onLine||!receiptScheduler)return;
- const seen=S.page==='chat'&&nearBottom()&&!S.older?Math.max(0,...visibleMessages(S.messages,S.cutoff).filter(isConfirmed).map(m=>m.seq)):0;
+ const seen=S.page==='chat'&&!$('#app').inert&&nearBottom()&&!S.older?Math.max(0,...visibleMessages(S.messages,S.cutoff).filter(isConfirmed).map(m=>m.seq)):0;
  receiptScheduler.request(S.latestSeq||0,seen);
 }
 function updateReceipts(){
