@@ -215,14 +215,14 @@ and anonymous denial. All test rows/objects and release changes rolled back.
 The real configuration remains **released=false**, opening no earlier than
 2026-10-25 00:00 Asia/Colombo; later owner release remains valid.
 
-**47 unit cases and 126 controlled browser scenarios pass** across the existing
-suites and five Project 28 journeys. Coverage includes owner editing and preview
+**47 unit cases and 127 controlled browser scenarios pass** across the existing
+suites and six Project 28 journeys. Coverage includes owner editing and preview
 isolation, every scene and game, nickname/long letter, four memories, 28 reasons,
 release/resume/completion, backend garden data, sealed metadata, idempotent hug,
 return to unchanged chat, worker photo preparation, signed chapter images, native
 voice playback, same-song upload plumbing, phone/tablet/desktop sizing, reduced
 motion including pseudo-elements, and 6x CPU garden interaction. Local garden
-interaction measured **182 ms** at 6x CPU. Tests use fictional data and controlled HTTP,
+interaction measured **179 ms** at 6x CPU. Tests use fictional data and controlled HTTP,
 WebSocket and storage transports. Synthetic PNG/WAV fixtures do not verify the
 actual supplied song. Desktop/phone rendered screenshots were inspected.
 
@@ -244,3 +244,7 @@ unverified because of environment network/device limits. The exact soundtrack
 URL is retained and a private same-song upload fallback exists; unavailability
 never blocks the story. The owner must personalize, preview and check sound on
 a phone before manually releasing. See [PROJECT28.md](PROJECT28.md).
+
+Project 28 follow-up: a failed private-song signed-URL retry is caught and shown
+as a quiet status message. Its browser scenario verifies that preview, portal
+progression and exit still work with a storage outage and no page errors.

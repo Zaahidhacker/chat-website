@@ -113,7 +113,7 @@ transports: owner editing, all seven scenes, all challenges, preview isolation,
 release/resume/completion, unread message delivery behind the overlay, idempotent
 hug, garden memories/capsules, worker photo upload, signed images, native voice
 playback, same-song upload plumbing, small screens, long letters, reduced-motion
-pseudo effects and 6x CPU garden interactions. Existing chat/photo/garden/island/
+pseudo effects, private soundtrack retry failure recovery and 6x CPU garden interactions. Existing chat/photo/garden/island/
 location/link/three-hearts regressions remain in CI. Media fixtures use synthetic
 PNG/WAV data and do not establish playback of the actual external song.
 
