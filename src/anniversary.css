@@ -1,0 +1,107 @@
+.anniversary{--ann-ink:#583d50;--ann-rose:#a94f72;--ann-soft:#eed9dc;position:fixed;inset:0;z-index:1500;overflow:auto;overscroll-behavior:contain;box-sizing:border-box;background:#faf0eb;color:var(--ann-ink);font-family:Manrope,sans-serif;line-height:1.65;isolation:isolate;scrollbar-width:thin;scrollbar-color:#cdaeb8 #faf0eb;min-height:100svh;min-height:100dvh;animation:ann-arrive 1.4s ease both}
+.anniversary *, .anniversary *::before,.anniversary *::after{box-sizing:border-box}
+.anniversary .ann-header{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0;padding:max(18px,env(safe-area-inset-top)) max(24px,env(safe-area-inset-right)) 12px max(24px,env(safe-area-inset-left));border:0;background:#faf0ebf5;color:var(--ann-ink);font-size:9px;letter-spacing:.2em;min-height:64px}
+.anniversary .ann-header nav{display:flex;align-items:center;gap:14px;letter-spacing:0;flex-shrink:0}
+.anniversary button{font:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.anniversary button:focus-visible,.ann-studio button:focus-visible{outline:2px solid #9a4368;outline-offset:5px}
+.anniversary .ann-text-button{padding:10px 2px;min-height:44px;border:0;background:none;color:#88526d;font-size:11px;letter-spacing:.02em;box-shadow:none;border-radius:0}
+.anniversary .ann-atmosphere{position:fixed;inset:0;pointer-events:none;z-index:-1;background:radial-gradient(ellipse at 50% 32%,#fffaf6 0,transparent 55%),radial-gradient(ellipse at 0 90%,#eecdd8aa,transparent 60%),radial-gradient(ellipse at 100% 0,#f5ddcc,transparent 60%);transition:opacity 1s}
+.anniversary .ann-atmosphere::after{content:"";position:absolute;inset:22px;border:1px solid #be8e9c33;border-radius:46% 46% 6px 6px;mask-image:linear-gradient(#0008,transparent 90%)}
+.anniversary .ann-stage{position:relative;max-width:100%;margin:0;padding:0 28px;min-height:calc(100svh - 170px);min-height:calc(100dvh - 170px);display:grid;place-items:center;transition:opacity .5s ease,transform .7s cubic-bezier(.16,1,.3,1);opacity:1}
+.anniversary.ann-quiet .ann-stage{opacity:0;transform:translateY(-6px)}
+.anniversary h1,.anniversary h2{font-family:'Cormorant Garamond',serif;font-weight:500;line-height:1.08;color:var(--ann-ink);letter-spacing:-.04em;margin:18px 0 24px;text-wrap:balance}
+.anniversary h1{font-size:clamp(38px,5.5vw,70px)}
+.anniversary h1 em{font-weight:500;color:var(--ann-rose)}
+.anniversary .ann-eyebrow{font-size:9px;letter-spacing:.24em;color:#946e80;text-align:center;margin:0 0 12px}
+.anniversary .ann-button{min-height:52px;padding:15px 25px;border:1px solid #8c4863;background:#8c4863;color:#fff4ed;border-radius:999px;font-size:13px;letter-spacing:.015em;box-shadow:0 8px 24px #9e507321;transition:transform .25s,background .25s;max-width:100%;white-space:normal;line-height:1.5}
+.anniversary .ann-button:hover{background:#743951;transform:translateY(-2px)}
+.anniversary .ann-button:active{transform:scale(.97)}
+.anniversary .ann-opening,.anniversary .ann-ending{width:min(640px,100%);text-align:center;padding:10px 0 30px}
+.anniversary .ann-opening>p:not(.ann-eyebrow),.anniversary .ann-ending>p:not(.ann-eyebrow){font-size:13px;color:#8f7180;margin:0 0 28px}
+.anniversary .ann-opening small{display:block;margin:20px 0 0;font-size:10px;color:#8d7381}
+.anniversary .ann-bird{position:relative;width:clamp(170px,28vh,255px);margin:0 auto;flex-shrink:0;filter:drop-shadow(0 14px 14px #9d667312)}
+.anniversary .ann-bird svg{display:block;width:100%;height:auto;overflow:visible}
+.anniversary .ann-opening .ann-bird{animation:oreo-peek 1.6s cubic-bezier(.16,1,.3,1) both}
+.anniversary .oreo-head{transform-origin:162px 153px;animation:oreo-tilt 5s ease-in-out 2}
+.anniversary .oreo-body{transform-origin:160px 288px;animation:oreo-hop .9s cubic-bezier(.16,1,.3,1) both}
+.anniversary .oreo-crest{transform-origin:166px 88px;animation:oreo-crest 3s ease-in-out 3}
+.anniversary .oreo-eyes{transform-box:fill-box;transform-origin:center;animation:oreo-blink 5s linear 3}
+.anniversary .oreo-sleep-eyes{opacity:0}
+.anniversary .oreo-wing{transform-box:view-box;transform-origin:126px 172px;animation:oreo-flutter 1.3s ease-in-out 1s 2}
+.anniversary .oreo-wing-right{transform-origin:197px 172px;animation-name:oreo-flutter-right}
+.anniversary .ann-feather{position:absolute;top:13%;right:11%;font-size:26px;color:#ce9d83;animation:ann-sparkle 2.4s ease both}
+.anniversary .dramatic .oreo-head{animation:oreo-dramatic 3.8s ease-in-out 2}
+.anniversary .excited .oreo-wing{animation:oreo-flutter .65s ease-in-out 6}
+.anniversary .excited .oreo-wing-right{animation-name:oreo-flutter-right}
+.anniversary .excited .oreo-body{animation:oreo-hop .85s ease-in-out 4}
+.anniversary .sleepy .oreo-eyes{opacity:0;animation:none}
+.anniversary .sleepy .oreo-sleep-eyes{opacity:1}
+.anniversary .sleepy .oreo-head{animation:oreo-sleep 5s ease-in-out 2;transform:rotate(9deg)}
+.anniversary .sleepy .oreo-crest{animation:none;transform:rotate(12deg)}
+.anniversary .sleepy .oreo-wing{animation:none}
+.anniversary .ann-conversation{position:relative;width:min(720px,100%);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px 0 24px;min-height:calc(100svh - 180px);min-height:calc(100dvh - 180px)}
+.anniversary .ann-dialogue-space{width:100%;min-height:180px;display:grid;place-items:start center;padding:14px 0 0}
+.anniversary .ann-dialogue{font-family:'Cormorant Garamond',serif;font-size:clamp(29px,4.5vw,43px);font-weight:500;line-height:1.25;letter-spacing:-.025em;max-width:650px;margin:0;text-wrap:balance;overflow-wrap:break-word}
+.anniversary .ann-dialogue::after{content:"";display:inline-block;width:1px;height:.7em;background:#b77992;margin-left:5px;animation:ann-cursor 1.2s steps(2) 5}
+.anniversary .ann-next{min-height:44px;padding:9px 18px;border:0;background:transparent;color:#8f5874;font-size:11px;letter-spacing:.03em;border-bottom:1px solid #bc879955;border-radius:0;box-shadow:none}
+.anniversary .ann-chapter-line{width:90px;height:1px;background:#c6a6b655;margin:26px auto 0}
+.anniversary .ann-chapter-line span{display:block;height:1px;background:#ac6586;transition:width .6s}
+.anniversary[data-scene="3"] .ann-atmosphere{opacity:.5}
+.anniversary[data-scene="4"]{background:#f2dce0}
+.anniversary[data-scene="4"] .ann-atmosphere{background:radial-gradient(ellipse at 50% 35%,#fff7da,transparent 65%),radial-gradient(ellipse at 0 80%,#ebb4c7,transparent 65%)}
+.anniversary .ann-reveal .ann-dialogue{font-size:clamp(31px,4.7vw,57px);color:#984865;line-height:1.08;animation:ann-reveal 1.5s cubic-bezier(.16,1,.3,1) both}
+.anniversary .ann-reveal .ann-dialogue-space{min-height:205px}
+.anniversary .ann-petals{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.anniversary .ann-petals i{position:absolute;left:var(--x);top:15%;font-style:normal;color:#c37899;font-size:calc(12px + var(--i)*1px);opacity:0;animation:ann-petal 8s ease-in-out calc(var(--i)*.28s) both}
+.anniversary .ann-letter-intro{position:relative;text-align:center;width:100%;padding:30px 0 0}
+.anniversary .ann-letter-intro .ann-bird{width:110px;margin:0 auto -10px;z-index:1}
+.anniversary .ann-letter{position:relative;width:min(680px,100%);background:#fffaf1;color:#5d4650;border:1px solid #d4b7b255;border-radius:3px;padding:clamp(24px,6vw,64px);margin:0 auto 40px;box-shadow:0 16px 60px #6b425015;transform-origin:top center;animation:ann-paper 1.1s cubic-bezier(.16,1,.3,1) both}
+.anniversary[data-scene="8"] .ann-stage{display:block;max-width:100%;padding:0 20px}
+.anniversary .ann-letter-seal{width:58px;height:58px;border:1px solid #d8aab5;border-radius:50%;display:grid;place-items:center;color:#b17385;font:18px 'Cormorant Garamond',serif;margin:0 auto 22px;box-shadow:inset 0 0 0 4px #fffaf1,inset 0 0 0 5px #e9ced1}
+.anniversary .ann-letter-date{text-align:center;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#aa8990}
+.anniversary .ann-letter h2{font:38px Allura,cursive;text-align:center;letter-spacing:0;margin:30px 0;color:#a5617b}
+.anniversary .ann-letter-body p{font-family:Manrope,sans-serif;font-size:15px;line-height:1.95;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 24px;color:#654d56}
+.anniversary .ann-letter-end{font:32px 'Cormorant Garamond',serif;text-align:center;color:#ba7b94;margin:20px auto 30px}
+.anniversary .ann-letter>.ann-button{display:block;margin:0 auto}
+.anniversary .ann-footer{position:relative;text-align:center;padding:12px 22px max(18px,env(safe-area-inset-bottom));background:none;border:0;color:#947683;min-height:70px}
+.anniversary .ann-footer>span{font-size:8px;letter-spacing:.16em}
+.anniversary .ann-footer p{font-size:10px;margin:6px 0 0;line-height:1.5;color:#8b6077}
+.anniversary .ann-audio-help{font-size:11px;max-width:450px;margin:8px auto 0;line-height:1.5}
+.anniversary .ann-audio-help[hidden]{display:none}
+.anniversary .ann-audio-help button{display:block;margin:auto}
+.anniversary .ann-ending .ann-text-button{display:block;margin:12px auto 0}
+.anniversary .ann-ending h1{font-size:clamp(39px,5.5vw,67px)}
+.anniversary .ann-ending h1 em{display:inline-block;margin-top:12px}
+.anniversary .ann-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.anniversary.ann-paused *,.anniversary.ann-paused *::after{animation-play-state:paused!important}
+.ann-studio{padding:28px;border:1px solid #b9769744;border-radius:18px;background:#f4e4e9;color:#624458;margin:0 0 40px}
+.ann-studio h2{font:36px 'Cormorant Garamond',serif;color:#7d4965;margin:10px 0}
+.ann-studio p{color:#755b6c;font-size:13px}
+.ann-studio small{display:block;font-size:11px;margin-top:16px;color:#755b6c}
+.ann-studio button{background:#8c4863;color:#fff4ed;border:0;border-radius:50px;padding:15px 23px;min-height:48px;cursor:pointer}
+@font-face{font-family:Allura;src:url('/assets/allura-latin.woff2') format('woff2');font-display:swap;font-weight:400}
+@keyframes ann-arrive{0%{opacity:0}40%{opacity:.7}65%{opacity:.62}100%{opacity:1}}
+@keyframes oreo-peek{from{transform:translate(-50px,16px) rotate(-12deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes oreo-hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px) rotate(-2deg)}70%{transform:translateY(1px)}}
+@keyframes oreo-tilt{0%,35%,100%{transform:rotate(0)}55%,70%{transform:rotate(-7deg)}}
+@keyframes oreo-dramatic{0%,100%{transform:rotate(0)}30%{transform:rotate(-10deg)}65%{transform:rotate(8deg)}}
+@keyframes oreo-crest{0%,100%{transform:rotate(0)}50%{transform:rotate(-5deg)}}
+@keyframes oreo-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.05)}}
+@keyframes oreo-flutter{0%,100%{transform:rotate(0)}45%{transform:rotate(24deg)}}
+@keyframes oreo-flutter-right{0%,100%{transform:rotate(0)}45%{transform:rotate(-24deg)}}
+@keyframes oreo-sleep{0%,100%{transform:rotate(9deg)}50%{transform:rotate(13deg) translateY(2px)}}
+@keyframes ann-sparkle{0%,100%{opacity:0;transform:scale(.6) rotate(-15deg)}50%{opacity:.8;transform:scale(1) rotate(0)}}
+@keyframes ann-cursor{0%{opacity:.2}100%{opacity:1}}
+@keyframes ann-reveal{from{transform:translateY(14px) scale(.94);opacity:0}to{transform:none;opacity:1}}
+@keyframes ann-petal{0%{opacity:0;transform:translateY(30px) rotate(0)}25%,65%{opacity:.6}100%{opacity:0;transform:translateY(-170px) rotate(35deg)}}
+@keyframes ann-paper{from{opacity:0;transform:perspective(1000px) rotateX(5deg) translateY(18px)}to{opacity:1;transform:none}}
+@media(min-width:800px){.anniversary .ann-stage{padding-left:70px;padding-right:70px}.anniversary .ann-header{padding-left:48px;padding-right:48px}.anniversary .ann-conversation{max-width:760px}.anniversary .ann-letter-intro{padding-top:45px}}
+@media(max-width:430px){.anniversary .ann-header{padding-left:18px;padding-right:18px;gap:8px}.anniversary .ann-header>span{font-size:7px;max-width:100px;line-height:1.6}.anniversary .ann-header nav{gap:12px}.anniversary .ann-stage{padding:0 22px}.anniversary .ann-dialogue-space{min-height:180px}.anniversary .ann-letter-body p{font-size:15px;line-height:1.95}.anniversary .ann-letter h2{font-size:34px}.anniversary .ann-reveal .ann-dialogue-space{min-height:220px}}
+@media(max-height:710px){.anniversary .ann-bird{width:155px}.anniversary .ann-conversation{padding-top:4px}.anniversary .ann-dialogue-space{min-height:150px}.anniversary .ann-opening h1{font-size:35px}}
+@media(prefers-reduced-motion:reduce){.anniversary,.anniversary *,.anniversary *::before,.anniversary *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.anniversary .ann-petals{display:none}.anniversary .ann-quiet .ann-stage{transform:none}.anniversary .ann-opening .ann-bird{opacity:1;transform:none}}
+
+.anniversary .ann-letter-body{text-align:start}.anniversary .ann-letter-body p{max-width:none}
+
+.p28 .ann-studio p,.p28 .ann-studio small{color:#755b6c}body:has(.anniversary) #app *{animation-play-state:paused!important}
+
+.anniversary .ann-resume{width:min(540px,100%);text-align:center;padding:24px 0 38px}.anniversary .ann-resume .ann-bird{width:190px}.anniversary .ann-resume>p:not(.ann-eyebrow){font-size:13px;color:#8f7180;max-width:340px;margin:0 auto 30px}.anniversary .ann-resume .ann-button,.anniversary .ann-resume .ann-text-button{display:block;margin:14px auto}.anniversary .ann-resume small{display:block;font-size:10px;color:#967383;margin-top:20px}.anniversary .ann-next:disabled{cursor:default;color:#a58694;border:0}.anniversary .ann-resume h1{font-size:clamp(44px,6vw,66px)}

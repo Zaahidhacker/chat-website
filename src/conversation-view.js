@@ -1,6 +1,7 @@
+import {anniversaryGate,stopAnniversary} from './anniversary-gate.js';
 let p28Module,p28Ticket=0;
-export function stopProject28(){p28Ticket++;p28Module?.stopProject28()}
-export async function project28(db,S,onReturn){const ticket=++p28Ticket;try{const r=await db.from('project28_config').select('*').eq('id',true);if(r.error||!r.data?.[0]||ticket!==p28Ticket)return;const module=await import('./project28.js');if(ticket!==p28Ticket)return;p28Module=module;module.project28(db,S,onReturn,r.data[0])}catch{}}
+export function stopProject28(){p28Ticket++;stopAnniversary();p28Module?.stopProject28()}
+export async function project28(db,S,onReturn){const ticket=++p28Ticket;anniversaryGate(db,S,onReturn).catch(()=>{});try{const r=await db.from('project28_config').select('*').eq('id',true);if(r.error||!r.data?.[0]||ticket!==p28Ticket)return;const module=await import('./project28.js');if(ticket!==p28Ticket)return;p28Module=module;module.project28(db,S,onReturn,r.data[0])}catch{}}
 export {secretMessage,closeSecret} from './heart-secret.js';
 export {presenceLabel} from './presence.js';
 export function receiptHTML(m,status){

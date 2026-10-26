@@ -248,3 +248,69 @@ a phone before manually releasing. See [PROJECT28.md](PROJECT28.md).
 Project 28 follow-up: a failed private-song signed-URL retry is caught and shown
 as a quiet status message. Its browser scenario verifies that preview, portal
 progression and exit still work with a storage outage and no page errors.
+
+## 27 October 2026 — Oreo’s one-month anniversary and interruption recovery
+
+Implemented the supplied one-month story in the existing app: original layered
+SVG cockatiel Oreo, paced suspense/typewriter dialogue, the exact reveal, nine
+unaltered letter paragraphs, every final conversation/goodbye line, a held ending,
+and the supplied Ayed — Awedak URL. Local Cormorant/Manrope/Allura typography,
+finite transform/opacity animations, sticky safe-area controls and reduced-motion
+alternatives are used. The letter remains until its bottom button is tapped.
+
+There is no anniversary draft/publish/upload requirement. Server time gates the
+slot-2 recipient at **2026-10-27 00:00 Asia/Colombo** (2026-10-26 18:30 UTC), with
+no expiry window. Owner-only Studio and sidebar previews use the actual story
+without writing her progress. The older 28-day journey and saved content are
+separate; its existing release flag remains false.
+
+The resume update is integrated into the same experience. An unfinished viewing
+returns automatically on another visit with Continue/Start over choices after
+meaningful progress. Scene/dialogue checkpoints, coalesced letter reading position,
+started state, completion and a server completion timestamp are account-scoped.
+Only the fully displayed **Gnn 😂❤️** and its final three-second pause allow
+completion. Exit, skips, letter opening/closing and previews cannot complete it.
+The final line has no skip control. The checkpoint RPC rejects early completion
+and atomically retains completion/timestamp across late device writes and replay.
+
+The private 0600 backup `work/pre-anniversary-backup.json` was parsed and checksum
+verified before additive database work. SHA-256:
+`c936f04610abd777c300090dc3e56277678eb5bd46f33b6333347b54bb9fea5b`.
+Full-row comparison found **4,060 baseline messages, 18 photo records, both basic
+account identities, existing Project 28 config/progress/memories/capsules unchanged**.
+No reset, restore, old-table migration, photo-byte write or real recipient progress
+write was performed. Live SQL tests run under authenticated owner/recipient/
+outsider and anonymous roles inside rolled-back transactions. They verify access,
+preview write denial, rejection of early completion, reading checkpoints, valid
+completion and timestamp preservation. Security advisors show no new anniversary
+findings. The new RPCs use SECURITY INVOKER and existing RLS authorization.
+
+**49 unit tests and 138 controlled Chromium browser scenarios passed** after the
+resume integration and visual refinements. This includes all existing messaging,
+upgrade, photo/garden, island, link, location, overhaul, three-heart and Project 28
+suites plus eleven anniversary scenarios. Those eleven cover the exact complete
+story, playable synthetic media, blocked autoplay and media failure, owner preview
+isolation, no letter auto-advance, all requested interruption points, a visit eight
+hours later, reveal refresh, cross-device letter scroll restoration, interrupted
+final speech/Gnn, completion, later reopen and replay. Normal-motion behavior at
+6x CPU, background pause and reduced motion were exercised. Responsive layouts
+were checked at 360×800, 375×812, 390×844, 430×932, 768×1024 and 1440×900.
+Rendered reveal, letter, Oreo, resume and ending screenshots were inspected.
+The initial JS/CSS remains **24,987 bytes gzip**, below the unchanged 25,000 guard.
+Production dependency audit reports zero vulnerabilities; no new dependency or
+paid service was installed. The scoped source diff passes whitespace checks;
+pre-existing MCP configuration changes are intentionally excluded.
+
+These browser tests use controlled HTTP/WebSocket/media fixtures, not live
+private-account production sessions. WebKit download attempts were blocked by
+network policy, so Safari/physical-phone coverage is unverified. The workspace
+also blocks htmlhoster.com (CONNECT 403), and the web reader cannot access the
+recording: its actual encoding, MIME/range behavior, availability and phone playback
+remain unverified. The exact recording is integrated with honest play/mute/retry
+state and gesture fallback; no replacement track or required upload was added.
+
+Production verification uses the existing GitHub main → Vercel production
+integration for `Zaahidhacker/chat-website`, with build/state and production HTTP/
+asset inspection through the authenticated Vercel connector. Actual deployment
+identity and verification results are reported after push. See ANNIVERSARY.md
+for implementation details, limitations and a data-preserving UI rollback.

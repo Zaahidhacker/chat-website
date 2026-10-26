@@ -115,3 +115,5 @@ The header now shows privacy-controlled Online/Last seen from existing activity 
 Project 28 is an owner-released anniversary journey inside this application. See
 [PROJECT28.md](PROJECT28.md) for the studio, personalization, safe release, private
 storage, tests and known soundtrack/device limits. It ships unreleased.
+
+The October 27 anniversary runs automatically for the partner account, with a private owner preview. See [ANNIVERSARY.md](ANNIVERSARY.md).

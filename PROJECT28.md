@@ -1,5 +1,10 @@
 # Project 28: The Universe of Us
 
+The **October 27 one-month anniversary** now has its own automatically scheduled
+Oreo experience and live preview. It requires no draft-saving or manual release.
+See [ANNIVERSARY.md](ANNIVERSARY.md). The workflow below applies only to the
+separate, preserved **28-day universe journey**.
+
 ## Owner workflow
 
 Sign in as Zaahid and open **Project 28 studio** in the existing sidebar (open the
