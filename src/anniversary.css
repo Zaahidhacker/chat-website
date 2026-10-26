@@ -14,7 +14,7 @@
 .anniversary h1 em{font-weight:500;color:var(--ann-rose)}
 .anniversary .ann-eyebrow{font-size:9px;letter-spacing:.24em;color:#946e80;text-align:center;margin:0 0 12px}
 .anniversary .ann-button{min-height:52px;padding:15px 25px;border:1px solid #8c4863;background:#8c4863;color:#fff4ed;border-radius:999px;font-size:13px;letter-spacing:.015em;box-shadow:0 8px 24px #9e507321;transition:transform .25s,background .25s;max-width:100%;white-space:normal;line-height:1.5}
-.anniversary .ann-button:hover{background:#743951;transform:translateY(-2px)}
+.anniversary .ann-button:hover{background:#743951}
 .anniversary .ann-button:active{transform:scale(.97)}
 .anniversary .ann-opening,.anniversary .ann-ending{width:min(640px,100%);text-align:center;padding:10px 0 30px}
 .anniversary .ann-opening>p:not(.ann-eyebrow),.anniversary .ann-ending>p:not(.ann-eyebrow){font-size:13px;color:#8f7180;margin:0 0 28px}
@@ -105,3 +105,49 @@
 .p28 .ann-studio p,.p28 .ann-studio small{color:#755b6c}body:has(.anniversary) #app *{animation-play-state:paused!important}
 
 .anniversary .ann-resume{width:min(540px,100%);text-align:center;padding:24px 0 38px}.anniversary .ann-resume .ann-bird{width:190px}.anniversary .ann-resume>p:not(.ann-eyebrow){font-size:13px;color:#8f7180;max-width:340px;margin:0 auto 30px}.anniversary .ann-resume .ann-button,.anniversary .ann-resume .ann-text-button{display:block;margin:14px auto}.anniversary .ann-resume small{display:block;font-size:10px;color:#967383;margin-top:20px}.anniversary .ann-next:disabled{cursor:default;color:#a58694;border:0}.anniversary .ann-resume h1{font-size:clamp(44px,6vw,66px)}
+
+/* A little illustrated theatre, with Oreo in the spotlight. */
+.anniversary{--ann-ink:#51394a;--ann-rose:#a44d70;background:#f3e3df}
+.anniversary .ann-atmosphere{background:radial-gradient(ellipse at 50% 25%,#fffaf2 0,#fff5ed77 34%,transparent 65%),radial-gradient(ellipse at 0 75%,#e7b7c9aa,transparent 60%),linear-gradient(135deg,#f5e8df,#edd6df)}
+.anniversary .ann-atmosphere::after{inset:18px;border-color:#ae7f9155;border-radius:48% 48% 12px 12px}
+.anniversary .ann-header{background:#fff6efeb;border-bottom:1px solid #b8849820}
+.anniversary .ann-portrait{position:relative;isolation:isolate;width:min(320px,100%);margin:6px auto 28px;padding:3px 0 27px}
+.anniversary .ann-portrait::before{content:"";position:absolute;inset:8% 8% 4%;z-index:-1;border:1px solid #fff9ef;border-radius:48% 48% 42% 42%;background:linear-gradient(155deg,#fffaf0d9,#fff4f338);box-shadow:0 12px 44px #95627b12,inset 0 0 0 7px #fffaf035}
+.anniversary .ann-portrait-ring{position:absolute;inset:4% 4% 0;z-index:-1;border:1px solid #b1839238;border-radius:48% 48% 44% 44%;transform:rotate(-8deg)}
+.anniversary .ann-portrait-ring::before,.anniversary .ann-portrait-ring::after{content:"✦";position:absolute;top:16%;left:4%;font-size:20px;color:#b58d68;background:#f8eae3;padding:0 4px}
+.anniversary .ann-portrait-ring::after{top:auto;left:auto;right:1%;bottom:19%;font-size:14px}
+.anniversary .ann-portrait .ann-bird{width:clamp(245px,32vh,300px);max-width:100%;filter:drop-shadow(0 12px 8px #9d667319)}
+.anniversary .ann-oreo-name{position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.23em;padding:8px 21px;border:1px solid #d1a9b17a;border-radius:50px;background:#fff8eeeF;color:#88596a;white-space:nowrap;box-shadow:0 4px 12px #b78a9810}
+.anniversary .ann-oreo-name i{font-style:normal;color:#b2708d;margin-left:6px}
+.anniversary .ann-opening{width:min(1060px,100%);padding-top:18px}
+.anniversary .ann-opening .ann-portrait{width:min(350px,100%);margin-bottom:32px}
+.anniversary .ann-opening .ann-portrait .ann-bird{width:clamp(265px,35vh,340px)}
+.anniversary .ann-opening h1{margin:16px 0 20px}
+.anniversary .ann-opening h1 span{display:block;font-size:clamp(29px,4vw,46px);letter-spacing:-.02em;margin-bottom:2px}
+.anniversary .ann-opening h1 em{display:block;font-size:clamp(70px,10vw,112px);font-style:normal;line-height:1;letter-spacing:.025em;color:#96506e}
+.anniversary .ann-opening-copy>p:not(.ann-eyebrow){font-size:13px;line-height:1.85;color:#826575;margin:0 0 25px}
+.anniversary .ann-opening-copy small{max-width:290px;margin:19px auto 0;line-height:1.8;color:#927285}
+.anniversary .ann-button{background:linear-gradient(115deg,#a55b7b,#7f405e);border-color:#8e4b68;box-shadow:inset 0 1px 0 #f5cada70,0 9px 26px #93557126}
+.anniversary .ann-dialogue-space{position:relative;padding:24px 22px;min-height:180px;max-width:620px;border:1px solid #fff8eee0;background:linear-gradient(140deg,#fffaf5c9,#fff6f466);border-radius:28px;box-shadow:0 8px 32px #8f62720b;margin:6px 0 16px}
+.anniversary .ann-dialogue{font-size:clamp(29px,4.2vw,43px);line-height:1.28;letter-spacing:-.025em}
+.anniversary .ann-next{border-color:#b77e9844;color:#8c4a68}
+.anniversary .ann-reveal .ann-dialogue-space{background:transparent;border:0;box-shadow:none;padding:12px 0 4px;margin-bottom:15px}
+.anniversary .ann-reveal .ann-portrait::before{background:radial-gradient(ellipse at 50% 35%,#fff5d7,#f6ced67a);border-color:#fff3d5}
+.anniversary .ann-reveal .ann-dialogue{font-size:clamp(32px,4.7vw,58px);color:#9c4668}
+.anniversary .ann-letter{border:1px solid #d1b0a8;border-radius:5px;box-shadow:0 18px 65px #79435818,inset 0 0 0 7px #fffaf1,inset 0 0 0 8px #d9bdab55}
+.anniversary .ann-letter h2{font-size:44px;color:#9e5875;margin-bottom:34px}
+.anniversary .ann-letter-body p{color:#59434c}
+.anniversary .ann-letter-date{color:#8b6871}
+.anniversary .ann-letter-intro .ann-bird{width:140px;margin-bottom:-8px}
+.anniversary .ann-letter-seal{background:radial-gradient(ellipse at 32% 25%,#fff3eb,#edd3d3);box-shadow:inset 0 0 0 4px #fff9f0,inset 0 0 0 5px #cc9da9,0 4px 12px #b8859b17}
+.anniversary .ann-ending .ann-portrait{width:260px;margin-bottom:32px}
+.anniversary .ann-ending .ann-portrait .ann-bird{width:250px}
+.anniversary .ann-ending h1{font-size:clamp(38px,5.2vw,64px)}
+.anniversary .ann-ending>p:not(.ann-eyebrow){color:#806071}
+.anniversary .ann-resume .ann-portrait{width:230px;margin:0 auto 32px}
+.anniversary .ann-resume .ann-portrait .ann-bird{width:230px}
+.anniversary .ann-resume>p:not(.ann-eyebrow){color:#7e5c70}
+.anniversary .ann-footer>span{color:#866074}
+@media(min-width:950px){.anniversary .ann-opening{display:grid;grid-template-columns:1fr 1.1fr;gap:70px;align-items:center;text-align:left}.anniversary .ann-opening .ann-portrait{width:390px;margin:auto}.anniversary .ann-opening .ann-portrait .ann-bird{width:370px}.anniversary .ann-opening-copy .ann-eyebrow{text-align:left}.anniversary .ann-opening-copy small{margin-left:0}.anniversary .ann-opening-copy .ann-button{text-align:center}.anniversary .ann-conversation{padding-top:20px;padding-bottom:24px}.anniversary .ann-opening-copy>p:not(.ann-eyebrow){font-size:15px}}
+@media(max-width:430px){.anniversary .ann-stage{padding:0 22px}.anniversary .ann-opening{padding-top:12px}.anniversary .ann-opening .ann-portrait{width:280px;margin-bottom:30px}.anniversary .ann-opening .ann-portrait .ann-bird{width:275px}.anniversary .ann-conversation .ann-portrait{width:270px;margin-top:4px;margin-bottom:24px}.anniversary .ann-conversation .ann-portrait .ann-bird{width:265px}.anniversary .ann-dialogue-space{padding:20px 17px;min-height:182px}.anniversary .ann-letter h2{font-size:39px}.anniversary .ann-reveal .ann-dialogue-space{min-height:200px}}
+@media(max-height:740px){.anniversary .ann-conversation .ann-portrait{width:220px;margin-bottom:18px}.anniversary .ann-conversation .ann-portrait .ann-bird{width:215px}.anniversary .ann-opening .ann-portrait{width:230px}.anniversary .ann-opening .ann-portrait .ann-bird{width:225px}.anniversary .ann-opening h1 em{font-size:65px}.anniversary .ann-dialogue-space{min-height:160px}}

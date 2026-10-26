@@ -314,3 +314,28 @@ integration for `Zaahidhacker/chat-website`, with build/state and production HTT
 asset inspection through the authenticated Vercel connector. Actual deployment
 identity and verification results are reported after push. See ANNIVERSARY.md
 for implementation details, limitations and a data-preserving UI rollback.
+
+### Oreo visibility and the single requested letter correction
+
+A follow-up gives Oreo a larger, framed cameo, his nameplate and an explicit
+“Hellooo, it’s me… OREO” / cockatiel introduction. The opening has a deliberate
+6.5-second reading pause. Rose-glass dialogue surfaces, a two-column desktop
+introduction, more visible character art and an ivory bordered letter refine the
+same story. Scene indices and all release/checkpoint/completion logic are retained.
+Phone and desktop introduction, reveal, letter and ending screenshots were inspected.
+A hover translation that could destabilize a small-screen button was removed.
+
+Only paragraph one’s `one-month` changes to `oneee monthhh`. A verified 0600 private
+backup precedes the guarded letter update. Native SQL confirms that reversing
+that phrase reproduces the original whole-letter MD5; the unit test checks the
+same preservation with SHA-256. Other occurrences, words and paragraphs remain
+unchanged. The update never writes messages, accounts, photos or progress. New
+messages arriving during work are retained; no backup is restored over activity.
+
+All **49 unit tests**, **11 anniversary browser scenarios** and **18 messaging
+browser regressions** pass for this polish, with no page errors. These are
+controlled Chromium clients, with the same physical-device/media verification
+limits described above. Intro identity, resume/restart, mid-letter cross-device
+position, final goodbye and completion preservation are covered. The initial
+JS/CSS budget remains 24,987 bytes gzip. No dependency is added. Production
+verification follows the existing GitHub main → Vercel workflow.

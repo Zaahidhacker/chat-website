@@ -128,3 +128,22 @@ from controlled browser tests and live SQL authorization tests.
 For rollback, restore the preceding application deployment/commit. The additive
 anniversary objects can stay in place unused. Do not delete or restore any chat
 history, media, existing Project 28 content or account data to roll back this UI.
+
+## Owner-requested polish
+
+Oreo now introduces himself in the opening as your favourite little cockatiel and
+Zaahid’s tiny partner in crime. A larger illustrated cameo, delicate frame and
+nameplate, rose-glass dialogue surfaces, stronger letter styling and a two-column
+desktop introduction make the same story more personal. The opening waits 6.5
+seconds before automatically continuing; its entry button can continue sooner.
+Scene numbering, midnight release and all stored resume/completion state are
+unchanged. Existing finished viewings remain finished.
+
+Only the first paragraph’s `one-month` became `oneee monthhh`, as explicitly
+requested. The later occurrences and all other letter text stay intact. Both unit
+and browser checks validate the updated letter; the unit check also reverses that
+one phrase and verifies the original SHA-256. The guarded, idempotent content
+update is in `supabase/anniversary-letter-polish.sql`. Its pre-change letter and
+progress backup is `work/pre-oreo-polish.json` (0600 and ignored), SHA-256
+`684b7c70610c8eccb0ba9e81138425a1eac4b81f69c0484fff49d59b3d8fda71`.
+No message, account, photo or progress row is updated by that patch.
