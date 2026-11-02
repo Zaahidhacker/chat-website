@@ -29,3 +29,4 @@ jobs:
       - run: npm run test:hearts
       - run: npm run test:project28
       - run: npm run test:anniversary
+      - run: npm run test:interactions

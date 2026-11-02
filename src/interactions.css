@@ -1,0 +1,29 @@
+/* Animate: feedback, spatial consistency and state indication. No message entrances. */
+.receipt{display:inline-flex;align-items:center;gap:5px}.receipt-checks{width:19px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.receipt-checks .second{opacity:0}.receipt[data-status="Delivered"] .second,.receipt[data-status="Read"] .second{opacity:1;animation:tick-arrive .2s ease-out}.receipt[data-status="Read"]{color:var(--accent)}.receipt[data-status="Read"] .receipt-checks{animation:read-bloom .28s ease-out}.receipt[data-status="Sending"] .receipt-checks{opacity:.4}.receipt[data-status="Failed"]{color:#e79b9b}@keyframes tick-arrive{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:none}}@keyframes read-bloom{50%{opacity:.55;transform:scale(1.08)}}
+.unread-divider{display:flex;align-items:center;gap:14px;margin:25px 0;color:var(--accent);font-size:10px}.unread-divider:before,.unread-divider:after{content:"";height:1px;background:var(--line);flex:1}.message:last-child .bubble{animation:glass-arrive .2s ease-out}
+
+/* Independent scale preserves positioned game markers and swipe transforms. */
+button:disabled{scale:1}
+.nav,.icon-btn,.reaction,.theme-option,.world-doors button,.island-button,.island-text,.island-card,.firefly,.place-map-tools button{transition:scale 160ms var(--ease-out)}
+.nav>.icon,.icon-btn>.icon,.world-doors button>i,.island-pin>span{transition:transform 160ms var(--ease-out)}
+.switch:before,.switch:after{transition:transform 160ms var(--ease-out)}
+.modal-overlay{transition:opacity 200ms var(--ease-out)}
+.modal{animation:none;transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
+@starting-style{.modal-overlay{opacity:0}.modal{opacity:0;transform:translateY(8px) scale(.96)}}
+#toast{transition:opacity 200ms var(--ease-out),transform 200ms var(--ease-out)}
+/* Pointer targets stay fixed; only their artwork acknowledges a hover. */
+@media(hover:hover) and (pointer:fine){
+ .nav:hover{transform:none}.nav:hover>.icon{transform:translateX(2px)}
+ .icon-btn:not(:disabled):hover>.icon{transform:scale(1.06)}
+ .world-doors button:hover{transform:none}.world-doors button:hover>i{transform:translateX(3px)}
+ .island-pin:not(:disabled):hover>span{transform:translateY(-3px)}
+}
+@media(hover:none),(pointer:coarse){.island-pin:hover>span{transform:none}}
+@media(max-width:700px){.sidebar{transition:transform 250ms var(--ease-drawer),visibility 250ms}}
+/* These are feedback controls, not moving targets for keyboard users. */
+button:focus-visible{scale:1!important}button:focus-visible>.icon{transform:none!important}
+@media(prefers-reduced-motion:reduce){
+ button:active{scale:1!important}
+ .modal-overlay,.modal,#toast{transition:opacity 125ms ease!important;transform:none}
+ .nav>.icon,.icon-btn>.icon,.world-doors button>i,.island-pin>span{transform:none!important}
+}

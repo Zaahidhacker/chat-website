@@ -339,3 +339,12 @@ limits described above. Intro identity, resume/restart, mid-letter cross-device
 position, final goodbye and completion preservation are covered. The initial
 JS/CSS budget remains 24,987 bytes gzip. No dependency is added. Production
 verification follows the existing GitHub main → Vercel workflow.
+
+
+## Animate interaction polish — November 2, 2026
+
+Installed `emilkowalski/skills@animate` in the ignored agent skill directory; pinned its source/hash in skills-lock.json. Applied its frequency/purpose gate: restrained feedback on frequent controls, 200ms dialog entrances, 250ms mobile drawer spatial transitions, independent press scaling, stationary pointer targets with icon-only hover feedback, switch state transitions, and keyboard/reduced-motion protection. Existing SVG/game transforms remain independent of press scaling; photo viewing controls do not shrink photos on press. No perpetual animations or runtime dependencies added.
+
+Signed-in interaction CSS is a separate hashed cached asset, loaded with conversation-view. Moved existing receipt/unread styling there to preserve the initial 25 KB gzip guard. Final initial JS/CSS: 24,770 bytes gzip. No database, account, message, photo or progression changes.
+
+Validation: 49 unit tests, 18 existing two-client messaging scenarios, 9 overhaul scenarios, and focused Chromium checks for dialog timings, actual pointer press feedback, keyboard focus, reduced motion, preserved draft/history/scroll, and mobile overflow. Reviewed mobile screenshot. Browser tests use controlled transport; not authenticated production accounts. Physical-device feel remains worth checking. No new claims about Safari or real battery consumption.

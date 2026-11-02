@@ -1,3 +1,5 @@
+// Cached, signed-in motion polish keeps the cold login within its 25 KB budget.
+const interactionStyle=document.createElement('link');interactionStyle.rel='stylesheet';interactionStyle.href=INTERACTIONS_STYLE_URL;document.head.append(interactionStyle);
 import {anniversaryGate,stopAnniversary} from './anniversary-gate.js';
 let p28Module,p28Ticket=0;
 export function stopProject28(){p28Ticket++;stopAnniversary();p28Module?.stopProject28()}
