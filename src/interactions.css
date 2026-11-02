@@ -36,3 +36,6 @@ button:focus-visible{scale:1!important}button:focus-visible>.icon{transform:none
 .call-panel{position:fixed;z-index:55;bottom:24px;right:24px;width:min(360px,calc(100% - 32px));padding:28px;border:1px solid var(--line);border-radius:30px;background:var(--side);box-shadow:var(--shadow)}.call-panel h2{font:500 34px var(--serif);margin:16px 0}.call-panel p{font-size:13px;color:var(--muted);line-height:1.6}.call-controls{display:flex;gap:10px;margin-top:24px}.call-controls button{flex:1}.call-panel{animation:glass-arrive 200ms var(--ease-out)}
 @media(max-width:700px){.app-layout{padding:0}.main{border-radius:0}.chat-header{height:74px}.chat-header h1{font-size:23px}.chat-header .header-actions{gap:0}.chat-header .header-actions .icon-btn{width:32px;min-width:32px}.composer{padding:5px}.composer [data-action=little-notes]{display:none}.composer .icon-btn{width:30px;min-width:30px}.composer textarea{padding-inline:5px}.bubble{padding:11px 14px}.call-panel{bottom:16px;right:16px}}
 @media(prefers-reduced-motion:reduce){.call-panel{animation:none}}
+/* Keep the navigation scrollable while hiding its browser scrollbar. */
+.sidebar{scrollbar-width:none;-ms-overflow-style:none}
+.sidebar::-webkit-scrollbar{display:none}
