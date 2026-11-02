@@ -16,6 +16,7 @@
     "test:overhaul": "node tests/overhaul-browser.mjs",
     "test:hearts": "node tests/hearts-browser.mjs",
     "test:project28": "node tests/project28-browser.mjs",
+    "test:audio": "node tests/audio-browser.mjs",
     "test:interactions": "node tests/interactions-browser.mjs",
     "test:anniversary": "node tests/anniversary-browser.mjs"
   },

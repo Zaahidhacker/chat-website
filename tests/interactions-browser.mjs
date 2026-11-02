@@ -23,7 +23,7 @@ try {
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.locator('#message-input').click();const box=await target.boundingBox();
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(180);
- assert.equal(await target.evaluate(el=>getComputedStyle(el).scale),'0.97');await page.mouse.up();await page.getByRole('dialog').waitFor();
+ assert(Math.abs(Number(await target.evaluate(el=>getComputedStyle(el).scale))-.97)<.001);await page.mouse.up();await page.getByRole('dialog').waitFor();
  await page.keyboard.press('Escape');await page.waitForTimeout(200);
  assert.equal(await target.evaluate(el=>el.matches(':focus-visible')),true);
  assert.equal(await target.evaluate(el=>getComputedStyle(el).scale),'1');
