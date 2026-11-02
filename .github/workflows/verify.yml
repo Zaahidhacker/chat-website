@@ -31,3 +31,4 @@ jobs:
       - run: npm run test:anniversary
       - run: npm run test:interactions
       - run: npm run test:audio
+      - run: npm run test:design

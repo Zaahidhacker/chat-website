@@ -1,3 +1,5 @@
+import {updateRelationship,startRelationshipClock} from './relationship.js';
+startRelationshipClock();
 import { visibleMessages, receiptLabel, mergeMessages, boundMessages, isConfirmed } from "./logic.js";
 import { createReceiptScheduler, debounce } from "./scheduling.js";
 import { explainError, isConnectionError, resilientFetch } from './connection.js';
@@ -5,10 +7,12 @@ import { linkify } from './links.js';
 import { attachSwipeReply } from './swipe.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
-let db,clientReady,chatView,voiceAPI,callsAPI;
+let db,clientReady,chatView,voiceAPI;
+let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
+const authStorage={getItem:key=>sessionStorage.getItem(key)||localStorage.getItem(key),setItem:(key,value)=>{const chosen=rememberWorld?localStorage:sessionStorage,other=rememberWorld?sessionStorage:localStorage;chosen.setItem(key,value);other.removeItem(key)},removeItem:key=>{sessionStorage.removeItem(key);localStorage.removeItem(key)}};
 function ensureClient(){
- if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(([{createClient},views])=>{chatView=views;
-  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
+ if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(async([{createClient},views])=>{await views.ready;chatView=views;
+  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{storage:authStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
   db.auth.onAuthStateChange((event,session)=>{
    if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login();setNotificationAccount(null)}
    if(event==='TOKEN_REFRESHED'&&session){db.realtime.setAuth(session.access_token)}
@@ -20,7 +24,7 @@ function ensureClient(){
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const paths = { photo:"M4 4h16v16H4V4Zm0 12 5-5 4 4 3-3 4 4M15 8h.01", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z", chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6A8.5 8.5 0 1 1 21 11.5Z", bookmark: "M6 3h12v19l-6-4-6 4V3Z", spark: "m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6L12 2Z", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.5 4 1.5-1-2-3-1.7.5L17 7l-.2-2H7.2L7 7 5.7 8.5 4 8l-2 3 1.5 1L3 14l-1 1 2 3 2-.5L8 19l.2 2h7.6l.2-2 2-1.5 2 .5 2-3-1-1-.5-2Z", lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4m-3 5v2", moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z", sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5", arrow: "M5 12h14m-6-6 6 6-6 6", send: "m22 2-7 20-4-9L2 9l20-7ZM11 13 22 2", smile: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 14s1 3 4 3 4-3 4-3M8 9h.01M16 9h.01", more: "M5 12h.01M12 12h.01M19 12h.01", search: "M20 20l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z", close: "m6 6 12 12M6 18 18 6", logout: "M9 4H4v16h5m5-13 5 5-5 5M8 12h11", reply: "m9 5-7 7 7 7M2 12h12c4 0 6 2 6 7", trash: "M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7", check: "m4 12 5 5L20 6", menu: "M4 6h16M4 12h16M4 18h16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z", down: "m6 9 6 6 6-6", note: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h3" };
+const paths = { mic:"M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3ZM5 10v2a7 7 0 0 0 14 0v-2M12 19v4M8 23h8", photo:"M4 4h16v16H4V4Zm0 12 5-5 4 4 3-3 4 4M15 8h.01", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z", chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6A8.5 8.5 0 1 1 21 11.5Z", bookmark: "M6 3h12v19l-6-4-6 4V3Z", spark: "m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6L12 2Z", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.5 4 1.5-1-2-3-1.7.5L17 7l-.2-2H7.2L7 7 5.7 8.5 4 8l-2 3 1.5 1L3 14l-1 1 2 3 2-.5L8 19l.2 2h7.6l.2-2 2-1.5 2 .5 2-3-1-1-.5-2Z", lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4m-3 5v2", moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z", sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5", arrow: "M5 12h14m-6-6 6 6-6 6", send: "m22 2-7 20-4-9L2 9l20-7ZM11 13 22 2", smile: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 14s1 3 4 3 4-3 4-3M8 9h.01M16 9h.01", more: "M5 12h.01M12 12h.01M19 12h.01", search: "M20 20l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z", close: "m6 6 12 12M6 18 18 6", logout: "M9 4H4v16h5m5-13 5 5-5 5M8 12h11", reply: "m9 5-7 7 7 7M2 12h12c4 0 6 2 6 7", trash: "M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7", check: "m4 12 5 5L20 6", menu: "M4 6h16M4 12h16M4 18h16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z", down: "m6 9 6 6 6-6", note: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h3" };
 const icon = (n) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n] || paths.heart}"/></svg>`;
 const ib = (n, title, action2, cl = "") => `<button type="button" class="icon-btn ${cl}" aria-label="${title}" title="${title}" data-action="${action2}">${icon(n)}</button>`;
 const logo = () => `<div class="logo">${icon("heart")}</div>`;
@@ -69,6 +73,7 @@ function setTheme(t) {
   document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f8f5f3" : "#101011";
 }
 setTheme(theme);
+try{document.body.classList.toggle('quiet-sky',localStorage.getItem('universe-quiet-sky')==='true')}catch{}
 function toast(t) {
   $("#toast").textContent = t;
   $("#toast").classList.add("visible");
@@ -92,7 +97,19 @@ function date(t){const d=new Date(t);return d.toDateString()===new Date().toDate
 function login() {
   stop();
   S.user = null;
-  $("#app").innerHTML = `<main class="login"><section class="login-story"><div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>A LITTLE WORLD. JUST US.</small></div></div><div class="story-copy"><div class="eyebrow">Some things are just ours.</div><h1>One little space.<br>Two whole <em>worlds.</em></h1><p>For the everyday hellos, the late-night thoughts, and all the little things in between.</p><div class="orbit" aria-hidden="true"><div class="planet"></div><i></i></div></div><div class="story-footer">${icon("lock")} Invitation only. Made for two.</div></section><section class="login-form-area">${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme", "corner-theme")}<form class="login-form" id="login-form"><div class="eyebrow">YOUR PERSON IS A MESSAGE AWAY</div><h2>${inviteMode ? "Make yourself at home." : "Back to our little world."}</h2><p>${inviteMode ? "Your invitation opens the door. Choose your password, then verify your email." : "A quiet place for your favorite conversations.<br>Come on in."}</p><label for="email">Your email</label><input id="email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required><label for="password">${inviteMode ? "Create your password" : "Your password"}</label><div class="password-wrap"><input id="password" name="password" type="password" autocomplete="${inviteMode ? "new-password" : "current-password"}" minlength="12" placeholder="${inviteMode ? "At least 12 characters" : "Your little secret"}" required>${ib("eye", "Show password", "show-password")}</div>${inviteMode ? '<label for="invite">Your private invitation code</label><input id="invite" name="invite" autocomplete="off" placeholder="Paste your invitation code" required>' : ""}<div id="login-error" class="form-error" role="alert"></div><button type="submit" class="primary">${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}</button><div class="login-bottom">${icon("lock")} Only the two invited accounts can enter.<br><button type="button" class="text-btn" data-action="invite-mode">${inviteMode ? "Already have a password? Sign in" : "First time here? Set your password"}</button></div><button type="button" class="text-btn sample-link" data-action="demo">Take a peek at a sample universe</button></form></section></main>`;
+  $("#app").replaceChildren($("#login-template").content.cloneNode(true));
+  document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(document.body.classList.contains('quiet-sky'))));
+  updateRelationship();$("#remember-world").checked=rememberWorld;
+  if(inviteMode){
+   $('[data-purpose="auth-card-container"] h2').textContent='Make yourself at home.';
+   $('[data-purpose="auth-card-container"] h2+p').textContent='Your invitation opens the door. Choose your password, then verify your email.';
+   $('label[for="password"]').textContent='Create your password';$('#password').autocomplete='new-password';
+   $('#password').placeholder='At least 12 characters';
+   $('#invite-slot').innerHTML='<label for="invite">Your private invitation code</label><input id="invite" name="invite" autocomplete="off" required placeholder="Paste your invitation code">';
+   $('#login-form button[type="submit"]').textContent='Create my account';
+   $('[data-action="invite-mode"]').textContent='Already have a password? Sign in';
+  }
+
 }
 function stash(){
  if(S.demo||!S.user)return;
@@ -121,7 +138,7 @@ function restoreOutbox() {
   }
 }
 function stop(){
- voiceAPI?.dispose();callsAPI?.dispose();
+ voiceAPI?.dispose();
  if(channel&&db){db.removeChannel(channel);channel=null}
  clearInterval(pulse);clearInterval(presenceClock);clearTimeout(typingTimer);clearTimeout(hiddenPause);receiptScheduler?.close();receiptScheduler=null;
  if(renderFrame!==null){cancelAnimationFrame(renderFrame);renderFrame=null}
@@ -133,6 +150,7 @@ async function signIn(e) {
   btn.innerHTML = '<span class="spinner"></span>';
   $("#login-error").textContent = "";
   try {
+    rememberWorld=$('#remember-world')?.checked!==false;
     await ensureClient();
     const email = $("#email").value.trim(), password = $("#password").value;
     let result;
@@ -155,7 +173,7 @@ async function signIn(e) {
   }
 }
 async function sample() {
-  chatView??=await import('./conversation-view.js');
+  chatView??=await import('./conversation-view.js');await chatView.ready;
   stop();
   S = { ...S, user: { id: "me" }, me: { user_id: "me", name: "Zaahid", slot: 1, share_presence: true }, partner: { user_id: "them", name: "Layaana", share_presence: true, last_seen: (/* @__PURE__ */ new Date()).toISOString(), last_delivered: 100, last_read: 100 }, demo: true, older:false, latestSeq:5, newMessages:false, hidden:new Set(), cutoff: 0, page: "chat", hasMore: false, connected: true, favorites: /* @__PURE__ */ new Set(["d3"]), reactions: [{ message_id: "d4", user_id: "me", emoji: "\u2764\uFE0F" }] };
   const now = Date.now();
@@ -353,10 +371,9 @@ function updateReceipts(){
 function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))}
 
 function render() {
- if(S.user&&!S.demo){const uid=S.user.id;import('./calls.js').then(v=>{if(S.user?.id===uid&&!S.demo){callsAPI=v;v.configure({db,S,toast})}}).catch(()=>{})}
   ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
-  const active = (p) => S.page === p ? "active" : "";
-  $("#app").innerHTML = `<div class="app-layout"><aside class="sidebar" id="sidebar">${ib("close", "Close navigation", "mobile-menu", "sidebar-close")}<div class="brand">${logo()}<div><strong>Our Little Universe</strong><small>JUST THE TWO OF US.</small></div></div><div class="eyebrow">Our space</div><button class="nav ${active("chat")}" data-action="page-chat">${icon("chat")} Our conversation</button><button class="nav ${active("keepsakes")}" data-action="page-keepsakes">${icon("bookmark")} Keepsakes</button><button class="nav ${active("about")}" data-action="page-about">${icon("spark")} Our little world</button><button class="nav ${active("garden")}" data-action="page-garden">${icon("sun")} Our moon garden</button><button class="nav ${active("island")}" data-action="page-island">${icon("moon")} Our secret island</button><button class="nav ${active("location")}" data-action="page-location">${icon("eye")} Our places</button><div class="eyebrow" style="margin-top:30px">Make it yours</div><button class="nav ${active("settings")}" data-action="page-settings">${icon("settings")} Settings</button><div class="side-card">${icon("heart")}<p>\u201CThe best part of my day<br>is a little moment with you.\u201D</p><small>EVERYDAY MAGIC, JUST US.</small></div><div class="side-person"><div class="avatar">${esc(S.me?.name?.[0] || "Y")}</div><div><strong>${esc(S.me?.name || "You")}</strong><small>Your little corner of the world</small></div>${ib("logout", S.demo ? "Leave sample" : "Sign out", "logout")}</div></aside><main class="main"><header class="chat-header">${ib("menu", "Open navigation", "mobile-menu", "mobile-menu")}<div class="avatar pair">${S.page === "chat" ? esc(S.partner?.name?.[0] || "\u2661") : icon(S.page === "keepsakes" ? "bookmark" : S.page === "settings" ? "settings" : "spark")}</div><div><h1>${S.page === "chat" ? `<span id="partner-name">${esc(S.partner?.name || "Your person")}</span>` : S.page === "keepsakes" ? "Our keepsakes" : S.page === "settings" ? "Make yourself at home" : S.page === "garden" ? "Our moon garden" : S.page === "island" ? "Our secret island" : S.page === "location" ? "Our places" : "Our little world"} ${S.page === "chat" ? '<span style="color:var(--accent);font-weight:400">\u2661</span>' : ""}</h1><small id="partner-status">A little space, just for us</small></div><div class="header-actions"><span class="header-label">${icon("lock")} ONLY US</span>${ib("chat", "Audio call", "audio-call")}${ib("search", "Find a message", "search")}${ib(theme === "dark" ? "sun" : "moon", "Change appearance", "toggle-theme")}${ib("more", "Conversation options", "options")}</div></header>${S.demo ? '<div class="banner demo-banner">Sample universe \xB7 these are fictional messages.<button data-action="logout">Sign in to your own account</button></div>' : `<div class="banner">${icon("lock")} Our Little Universe <span>·</span> Just the two of us</div>`}<div id="location-controls"></div>${S.page === "chat" ? chatHTML() : S.page === "settings" ? (pageViews?.settingsHTML(pageContext())||secondaryPlaceholder()) : S.page === "keepsakes" ? (pageViews?.keepsakesHTML(pageContext())||secondaryPlaceholder()) : S.page === "garden" ? '<section class="content-page" id="garden-root"><p role="status">Opening our garden…</p></section>' : S.page === "island" ? '<section class="content-page" id="island-root"><p role="status">Finding our island…</p></section>' : S.page === "location" ? '<section class="content-page" id="location-root"><p>Opening our places…</p></section>' : (pageViews?.aboutHTML(pageContext())||secondaryPlaceholder())}</main></div>`;
+  $("#app").innerHTML=chatView.shellHTML({S,theme,logo,ib,icon,esc,chatHTML,pageViews,pageContext,secondaryPlaceholder});
+  updateRelationship();document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(document.body.classList.contains('quiet-sky'))));
   updateStatus();locationAPI?.controls($("#location-controls"));
   if(S.page==='about')import('./rituals.js').then(module=>{if(S.page==='about'&&$('#ritual-root')){ritualGame=module;module.mount($('#ritual-root'),{user:S.user,draft:prepareDraft})}}).catch(()=>{if($('#ritual-root'))$('#ritual-root').textContent='Couldn’t open these activities. Check your connection and reopen this page.'});
   if(S.page==='keepsakes'&&photoAPI)photoAPI.observe($('#keepsake-list'),id=>photoRecords.get(id));
@@ -394,7 +411,7 @@ function render() {
   }
 }
 function chatHTML() {
-  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("note", "Record voice note", "voice-record")}${ib("photo", "Share a photo", "attach-photo")}${ib("smile", "Choose an emoji", "emoji")}${ib("spark", "A little note", "little-notes", "ritual-compose")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea><button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
+  return `<div class="messages" id="messages" role="log" aria-label="Your conversation">${messagesHTML()}</div><div class="composer-area"><div id="typing" class="typing" aria-live="polite"></div><div id="reply-container">${replyHTML()}</div><form id="composer" class="composer">${ib("photo", "Share a photo", "attach-photo")}${ib("smile", "Choose an emoji", "emoji")}${ib("note", "A little note", "little-notes", "ritual-compose")}${ib("spark", "Send a wishing star", "wishing-star", "wish-compose")}<textarea id="message-input" rows="1" maxlength="8000" aria-label="Your message" placeholder="A little thought, just for you\u2026"></textarea>${ib("mic", "Record voice note", "voice-record")}<button type="submit" class="send" aria-label="Send message">${icon("send")}</button></form><div class="composer-footer"><span>${icon("heart")} A little world. Just us.</span><span class="desktop-hint">Enter to send \xB7 Shift + Enter for a new line</span><span>${icon("lock")} Invitation only</span></div></div>`;
 }
 function messageSignature(m){
  const reply=messageLookup.get(m.reply_to);
@@ -435,6 +452,7 @@ function scrollBottom() {
   });
 }
 function updateMessages(force){
+ const kept=$('.keepsake-count');if(kept)kept.textContent=S.favorites.size;
  if(S.page!=='chat'||document.hidden)return;
  if(renderFrame!==null)cancelAnimationFrame(renderFrame);
  renderFrame=requestAnimationFrame(()=>{renderFrame=null;
@@ -574,9 +592,12 @@ async function changeSettings() {
 }
 function prepareDraft(text){draft=(draft?draft+'\n\n'+String(text):String(text)).slice(0,8000);S.page='chat';S.reply=S.edit=null;closeModal();render();stash();$('#message-input')?.focus({preventScroll:true});scrollBottom()}
 async function action(a, el) {
- if(a==='voice-record'||a.startsWith('voice-play-')||a==='audio-call'){
+ if(a.startsWith('space-'))a='page-'+a.slice(6);
+ if(a==='ambient-mode'){const quiet=document.body.classList.toggle('quiet-sky');document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(quiet)));try{localStorage.setItem('universe-quiet-sky',String(quiet))}catch{}return}
+ if(a==='wishing-star'){prepareDraft('A little wishing star for you ✨ Make a wish, my love.');return}
+
+ if(a==='voice-record'||a.startsWith('voice-play-')){
  if(S.demo){toast('Sign in to use private audio.');return}
- if(a==='audio-call'){callsAPI??=await import('./calls.js');callsAPI.configure({db,S,toast});await callsAPI.start();return}
  voiceAPI??=await import('./voice.js');const ctx={db,S,modal,toast,done:m=>{applyIncoming([m]);updateMessages(true);closeModal()}};
  if(a==='voice-record')await voiceAPI.record(ctx);else await voiceAPI.play(a.slice(11),ctx);return;
  }
@@ -877,7 +898,7 @@ window.addEventListener('offline',updateStatus);
 window.addEventListener('pagehide',flushStash);
 login();
 // The public login and sample don't download or initialize the messaging SDK.
-let hasSavedSession=false;try{hasSavedSession=!!localStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
+let hasSavedSession=false;try{hasSavedSession=!!(localStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')||sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token'))}catch{}
 if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{

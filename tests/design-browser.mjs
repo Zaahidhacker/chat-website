@@ -1,0 +1,26 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';import http from 'node:http';import {readFile,mkdir,writeFile} from 'node:fs/promises';import path from 'node:path';import {performance} from 'node:perf_hooks';import {existsSync} from 'node:fs';import {gzipSync} from 'node:zlib';
+import {createFixture,users} from './transport-fixture.mjs';
+const root=path.resolve('dist');const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml','.webmanifest':'application/manifest+json'};
+const server=http.createServer(async(req,res)=>{let p=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(p==='/')p='/index.html';const file=path.resolve(root,'.'+p);if(!file.startsWith(root+path.sep)){res.writeHead(403);res.end();return}try{const b=await readFile(file);const zipped=(req.headers['accept-encoding']||'').includes('gzip')&&/\.(js|css|html)$/.test(file);res.writeHead(200,{'Content-Type':types[path.extname(file)]||'text/plain',...(zipped?{'Content-Encoding':'gzip'}:{})});res.end(zipped?gzipSync(b):b)}catch{res.writeHead(404);res.end('Not found')}});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const origin='http://127.0.0.1:'+server.address().port;
+const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),headless:true,args:['--no-sandbox']});
+
+const results=[];const errors=[];
+async function check(name,fn){await fn();results.push(name);console.log('PASS '+name)}
+try{
+ for(const width of [320,390,768,1440])await check('reference login and chat fit '+width+'px',async()=>{
+ const c=await browser.newContext({viewport:{width,height:800},serviceWorkers:'block'});const fixture=createFixture();await fixture.install(c);const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));await p.goto(origin);await p.evaluate(()=>document.fonts.ready);
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await p.screenshot({path:'work/final-login-'+width+'.png',fullPage:true});
+ await p.getByRole('button',{name:'Show password',exact:true}).click();assert.equal(await p.locator('#password').getAttribute('type'),'text');await p.getByRole('button',{name:'Hide password',exact:true}).click();
+ await p.getByRole('button',{name:'First time here?',exact:false}).click();await p.locator('#invite').waitFor();await p.getByRole('button',{name:'Already have a password?',exact:false}).click();assert.equal(await p.locator('#invite').count(),0);
+ await p.getByRole('button',{name:'Toggle celestial lighting',exact:true}).click();assert.equal(await p.locator('.floating-badge').first().evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
+ await p.getByRole('button',{name:'Take a peek',exact:false}).click();await p.locator('#message-input').waitFor();assert.equal(await p.getByRole('button',{name:'Audio call',exact:true}).count(),0);assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ const count=await p.locator('[data-message]').count();await p.locator('.celestial-charm').click();assert.match(await p.locator('#message-input').inputValue(),/wishing star/);assert.equal(await p.locator('[data-message]').count(),count);
+ await p.locator('.petal-charm').click();await p.getByRole('dialog').waitFor();await p.getByRole('button',{name:'Close',exact:true}).click();
+ if(width<=700){await p.getByRole('button',{name:'Open navigation'}).click();const side=await p.locator('.sidebar').evaluate(el=>{el.scrollTop=50;return {hidden:getComputedStyle(el).scrollbarWidth==='none',scroll:el.scrollTop}});assert(side.hidden&&side.scroll>0);await p.getByRole('button',{name:'Close navigation',exact:true}).click();await p.locator('.mobile-spaces [data-action=space-settings]').click();await p.getByRole('switch',{name:'Share online status',exact:true}).waitFor();await p.locator('.mobile-spaces [data-action=space-chat]').click()}
+ await p.screenshot({path:'work/final-chat-'+width+'.png'});assert.equal(fixture.requests.length,0);await c.close()});
+ await check('remember checkbox keeps an unchecked sign-in in this tab only',async()=>{
+ const c=await browser.newContext({serviceWorkers:'block'});const f=createFixture();await f.install(c);const p=await c.newPage();await p.goto(origin);await p.locator('#remember-world').uncheck();await p.locator('#email').fill(users[0].email);await p.locator('#password').fill('test-password-only');await p.getByRole('button',{name:'Enter our universe',exact:true}).click();await p.locator('#message-input').waitFor();const key='sb-jczsnrzqocstbpsgwkdy-auth-token';assert.equal(await p.evaluate(key=>!!localStorage.getItem(key),key),false);assert.equal(await p.evaluate(key=>!!sessionStorage.getItem(key),key),true);await p.reload();await p.locator('#message-input').waitFor();assert.equal(await p.evaluate(key=>!!localStorage.getItem(key),key),false);const other=await c.newPage();await other.goto(origin);await other.getByRole('heading',{name:'Back to our little world.'}).waitFor();await c.close()});
+ assert.deepEqual(errors,[]);await writeFile('work/design-report.json',JSON.stringify({passed:true,results,errors},null,2));
+}finally{await browser.close();server.close()}

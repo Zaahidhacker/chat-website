@@ -1,4 +1,7 @@
 import {build,transform} from 'esbuild';
+import postcss from 'postcss';
+import tailwind from 'tailwindcss';
+import tailwindConfig from './tailwind.config.cjs';
 import {readFile,writeFile,copyFile,mkdir,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
@@ -7,7 +10,7 @@ const alluraBytes=await readFile('node_modules/@fontsource/allura/files/allura-l
 const alluraURL=`/assets/allura-${createHash('sha256').update(alluraBytes).digest('hex').slice(0,12)}.woff2`;await writeFile('dist'+alluraURL,alluraBytes);
 const featureDefines={};
 for(const name of ['photos','garden','island','location','pages','hearts','project28','anniversary','interactions']){
- const css=(await transform((name==='location'?await readFile('node_modules/leaflet/dist/leaflet.css','utf8'):'')+(await readFile(`src/${name}.css`,'utf8')).replace('/assets/allura-latin.woff2',alluraURL),{loader:'css',minify:true})).code;
+ const css=(await transform((name==='location'?await readFile('node_modules/leaflet/dist/leaflet.css','utf8'):'')+((name==='interactions'?await readFile('src/legacy-chat.css','utf8'):'')+(await readFile(`src/${name}.css`,'utf8'))+(name==='interactions'?await readFile('src/dream-chat.css','utf8'):'')).replace('/assets/allura-latin.woff2',alluraURL),{loader:'css',minify:true})).code;
  const hash=createHash('sha256').update(css).digest('hex').slice(0,12),url=`/assets/${name}-${hash}.css`;
  await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':name.toUpperCase()+'_STYLE_URL']=JSON.stringify(url);
 }
@@ -17,7 +20,9 @@ const workerURL=`/assets/photo-worker-${workerHash}.js`;await writeFile('dist'+w
 const result=await build({entryPoints:['src/app.js'],bundle:true,minify:true,splitting:true,format:'esm',outdir:'dist/assets',entryNames:'[name]-[hash]',chunkNames:'[name]-[hash]',target:['es2020'],metafile:true,legalComments:'none',define:{...featureDefines,PHOTO_WORKER_URL:JSON.stringify(workerURL)}});
 const entry=Object.entries(result.metafile.outputs).find(([,v])=>v.entryPoint==='src/app.js')[0].replace(/^dist/,'');
 let cssSource=await readFile('src/style.css','utf8')+await readFile('src/overhaul.css','utf8');
-for(const [name,file]of [['manrope','node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2'],['cormorant','node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2']]){
+const utilities=await postcss([tailwind(tailwindConfig)]).process(await readFile('src/reference-utilities.css','utf8'),{from:'src/reference-utilities.css'});
+cssSource+=utilities.css+await readFile('src/reference-motion.css','utf8')+await readFile('src/dream.css','utf8');
+for(const [name,file]of [['poppins','node_modules/@fontsource/poppins/files/poppins-latin-400-normal.woff2'],['poppins-semibold','node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2'],['caveat','node_modules/@fontsource/caveat/files/caveat-latin-400-normal.woff2'],['manrope','node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2'],['cormorant','node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2']]){
  const bytes=await readFile(file),version=createHash('sha256').update(bytes).digest('hex').slice(0,12);
  const url=`/assets/${name}-${version}.woff2`;await writeFile('dist'+url,bytes);
  cssSource=cssSource.replace(`/assets/${name}-latin.woff2`,url);
@@ -25,10 +30,11 @@ for(const [name,file]of [['manrope','node_modules/@fontsource-variable/manrope/f
 const css=(await transform(cssSource,{loader:'css',minify:true,target:'es2020'})).code;
 const hash=createHash('sha256').update(css).digest('hex').slice(0,12);
 const cssURL=`/assets/style-${hash}.css`;await writeFile('dist'+cssURL,css);
-let html=await readFile('src/index.html','utf8');html=html.replace('/app.js',entry).replace('/style.css',cssURL);await writeFile('dist/index.html',html);
+let html=await readFile('src/index.html','utf8');html=html.replace('<!--LOGIN_TEMPLATE-->',`<template id="login-template">${await readFile('src/login-template.html','utf8')}</template>`);html=html.replace('/app.js',entry).replace('/style.css',cssURL);await writeFile('dist/index.html',html);
 for(const f of ['icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
 await copyFile('node_modules/motion/LICENSE.md','dist/motion-LICENSE.txt');
 await copyFile('node_modules/@fontsource/allura/LICENSE','dist/allura-LICENSE.txt');
+for(const name of ['poppins','caveat'])await copyFile(`node_modules/@fontsource/${name}/LICENSE`,`dist/${name}-LICENSE.txt`);
 await copyFile('node_modules/leaflet/LICENSE','dist/leaflet-LICENSE.txt');
 await copyFile('node_modules/@fontsource-variable/manrope/LICENSE','dist/manrope-LICENSE.txt');
 await copyFile('node_modules/@fontsource/cormorant-garamond/LICENSE','dist/cormorant-LICENSE.txt');

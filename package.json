@@ -16,6 +16,7 @@
     "test:overhaul": "node tests/overhaul-browser.mjs",
     "test:hearts": "node tests/hearts-browser.mjs",
     "test:project28": "node tests/project28-browser.mjs",
+    "test:design": "node tests/design-browser.mjs",
     "test:audio": "node tests/audio-browser.mjs",
     "test:interactions": "node tests/interactions-browser.mjs",
     "test:anniversary": "node tests/anniversary-browser.mjs"
@@ -23,13 +24,17 @@
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",
     "@fontsource/allura": "5.3.0",
+    "@fontsource/caveat": "5.2.7",
     "@fontsource/cormorant-garamond": "5.3.0",
+    "@fontsource/poppins": "5.2.7",
     "@supabase/supabase-js": "2.58.0",
     "leaflet": "1.9.4",
     "motion": "14.6.0"
   },
   "devDependencies": {
     "esbuild": "0.25.10",
-    "playwright": "1.62.1"
+    "playwright": "1.62.1",
+    "postcss": "8.5.32",
+    "tailwindcss": "3.4.19"
   }
 }

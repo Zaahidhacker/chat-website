@@ -1,0 +1,46 @@
+
+    @keyframes orbitRotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes gentleFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.75; transform: scale(1);  }
+      50% { opacity: 0.95; transform: scale(1.03);  }
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(0.8); }
+      50% { opacity: 0.9; transform: scale(1.2); }
+    }
+
+    .orbit-ellipse-1 {
+      transform-origin: center;
+      animation: orbitRotate 36s linear infinite;
+    }
+
+    .orbit-ellipse-2 {
+      transform-origin: center;
+      animation: orbitRotate 48s linear infinite reverse;
+    }
+
+    .floating-badge {
+      animation: gentleFloat 6s ease-in-out infinite;
+    }
+
+    .floating-badge-delayed {
+      animation: gentleFloat 7.5s ease-in-out 1.2s infinite;
+    }
+
+    .planet-glow {
+      animation: pulseGlow 4.5s ease-in-out infinite;
+    }
+
+    .star-twinkle-1 { animation: twinkle 3.2s ease-in-out infinite; }
+    .star-twinkle-2 { animation: twinkle 4.6s ease-in-out 1.5s infinite; }
+    .star-twinkle-3 { animation: twinkle 3.8s ease-in-out 0.8s infinite; }
