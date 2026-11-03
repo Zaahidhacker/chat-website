@@ -17,6 +17,7 @@
     "test:hearts": "node tests/hearts-browser.mjs",
     "test:project28": "node tests/project28-browser.mjs",
     "test:replies": "node tests/replies-presence-browser.mjs",
+    "test:latency": "node tests/latency-browser.mjs",
     "test:design": "node tests/design-browser.mjs",
     "test:audio": "node tests/audio-browser.mjs",
     "test:robustness": "node tests/robustness-browser.mjs",

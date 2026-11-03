@@ -31,7 +31,8 @@ let S = { user: null, me: null, partner: null, messages: [], favorites: /* @__PU
 function savedTheme(){try{return localStorage.getItem("universe-theme")||"dark"}catch{return "dark"}}
 let theme = savedTheme(), channel, pulse, presenceClock, typingTimer, lastTyped = 0, toastTimer, inviteMode = false, loadingOlder = false, refreshing = false, refreshQueued = false;
 let draft = "";
-let sessionEpoch=0,syncCursor=0,receiptScheduler=null,hiddenPause=null,stashTimer=null,renderFrame=null;
+let sessionEpoch=0,syncCursor=0,historyRequest=0,receiptScheduler=null,hiddenPause=null,stashTimer=null,renderFrame=null,recoveryTimer=null,recoveryAttempts=0;
+function recoverSoon(){if(recoveryTimer||recoveryAttempts>=3||!S.user||S.demo||document.hidden||!navigator.onLine)return;recoveryTimer=setTimeout(()=>{recoveryTimer=null;refresh()},[1000,3000,8000][recoveryAttempts++])}
 let messageLookup=new Map(),reactionLookup=new Map(),autoScrollPending=false;
 let replyContext=new Map(), resumeSession=null;
 let ritualGame,pageViews,photoAPI,garden,island,locationAPI,photoRecords=new Map();
@@ -141,6 +142,7 @@ function restoreOutbox() {
   }
 }
 function stop(preserveVoice=false){
+ clearTimeout(recoveryTimer);recoveryTimer=null;recoveryAttempts=0;
  livePresence?.close();livePresence=null;
  if(!preserveVoice)voiceAPI?.dispose();
  if(channel&&db){db.removeChannel(channel);channel=null}
@@ -222,10 +224,10 @@ function applyMetadata(state){
  if(oldName!==S.partner?.name&&S.page==='chat'&&$('#partner-name'))$('#partner-name').textContent=S.partner?.name||'Your person';
 }
 async function loadMessages(before){
- const epoch=sessionEpoch;
+ const epoch=sessionEpoch,request=++historyRequest;
  let q=db.from('universe_messages').select('*').gt('seq',S.cutoff).order('seq',{ascending:false}).limit(PAGE_SIZE);
  if(before)q=q.lt('seq',before);
- const {data,error}=await q;if(epoch!==sessionEpoch)return;if(error)throw error;
+ const {data,error}=await q;if(epoch!==sessionEpoch||request!==historyRequest)return;if(error)throw error;
  S.hasMore=data.length===PAGE_SIZE;if(data.length)S.oldestSeq=Math.min(...data.map(m=>m.seq));
  S.older=!!before;
  S.messages=boundMessages(mergeMessages(S.messages,data),{limit:WINDOW_SIZE,older:S.older,favorites:new Set()});
@@ -285,15 +287,17 @@ async function refresh(){
    if(epoch!==sessionEpoch)return;if(deltaError)throw deltaError;
    for(const m of data)if(!S.messages.some(x=>x.id===m.id))chatView.secretMessage(m,S.user.id);
    applyIncoming(data);
+   S.dataOnline=true;updateMessages();updateStatus();
    await loadPhotos(data.filter(m=>m.body.startsWith('📷 ')||photoRecords.has(m.id)),epoch);
    syncCursor=data.length?Math.max(syncCursor,...data.map(m=>m.revision)):target;
    if(data.length<100)syncCursor=target;
   }
   const ids=visibleMessages(S.messages,S.cutoff).slice(-WINDOW_SIZE).map(m=>m.id);
-  if(ids.length){const result=await db.from('universe_reactions').select('*').in('message_id',ids);if(epoch!==sessionEpoch)return;if(result.error)throw result.error;S.reactions=result.data}
+  if(ids.length){const result=await db.from('universe_reactions').select('*').in('message_id',ids);if(epoch!==sessionEpoch)return;if(!result.error)S.reactions=result.data}
+  clearTimeout(recoveryTimer);recoveryTimer=null;recoveryAttempts=0;
   S.dataOnline=true;updateMessages();updateStatus();receipt();
  }catch{
-  if(epoch===sessionEpoch){S.dataOnline=false;updateStatus()}
+  if(epoch===sessionEpoch){S.dataOnline=false;updateStatus();recoverSoon()}
  }finally{if(epoch===sessionEpoch){refreshing=false;if(refreshQueued){refreshQueued=false;queueMicrotask(refresh)}}}
 }
 function startRealtime(){
@@ -311,6 +315,7 @@ function startRealtime(){
  })
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_messages'},payload=>{
   if(epoch!==sessionEpoch||!payload.new?.id)return;
+  if(!S.connected||S.dataOnline===false){S.connected=true;S.dataOnline=true;updateStatus()}
   const near=nearBottom();applyIncoming([payload.new]);if(payload.eventType==='INSERT')chatView.secretMessage(payload.new,S.user.id);stash();updateMessages(near&&!S.older);receipt();
   if(payload.new.body?.startsWith('📷 '))loadPhotos([payload.new],epoch).then(()=>{if(epoch===sessionEpoch)updateMessages()});
   if(replyContext.has(payload.new.id))replyContext.set(payload.new.id,payload.new);
@@ -321,13 +326,14 @@ function startRealtime(){
  })
  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'universe_members'},p=>{
   if(epoch!==sessionEpoch)return;
+  S.connected=true;S.dataOnline=true;
   if(p.new.user_id===S.user.id){S.me=p.new;livePresence?.reconcile();chatView.unread(S);return}
   const nameChanged=S.partner?.name!==p.new.name;const receiptsChanged=S.partner?.last_read!==p.new.last_read||S.partner?.last_delivered!==p.new.last_delivered;S.partner=p.new;
   if(nameChanged&&$('#partner-name'))$('#partner-name').textContent=S.partner.name;
   if(receiptsChanged)updateReceipts();updateStatus();
   const t=$('#typing');clearTimeout(typingTimer);
   if(t)t.innerHTML=p.new.share_presence&&p.new.typing_until&&new Date(p.new.typing_until)>new Date()?'<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>'+esc(S.partner.name||'Your person')+' is typing…</span>':'';
-  typingTimer=setTimeout(()=>{if($('#typing'))$('#typing').textContent=''},4000);
+  typingTimer=setTimeout(()=>{if($('#typing'))$('#typing').textContent='';updateStatus()},Math.min(10000,Math.max(0,Date.parse(p.new.typing_until)-Date.now())||0)+50);
  })
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_reactions'},p=>{
   if(epoch!==sessionEpoch)return;
@@ -344,10 +350,11 @@ function startRealtime(){
   p.eventType==='DELETE'?S.favorites.delete(f.message_id):S.favorites.add(f.message_id);
   if(S.page==='chat')updateMessages();else if(S.page==='keepsakes')action('page-keepsakes');
  })
- .on('system',{},p=>{if(p.extension==='postgres_changes'&&p.status==='error'){S.connected=false;updateStatus()}})
+ .on('system',{},p=>{if(p.extension==='postgres_changes'&&p.status==='error'){S.connected=false;updateStatus();recoverSoon()}})
  .subscribe(status=>{
   if(epoch!==sessionEpoch)return;S.connected=status==='SUBSCRIBED';updateStatus();
   if(S.connected)refresh();
+  else recoverSoon();
  });
  clearInterval(pulse);clearInterval(presenceClock);presenceClock=setInterval(()=>{if(!document.hidden)updateStatus()},15000);
  pulse=setInterval(()=>{if(!document.hidden&&navigator.onLine){receipt();updateStatus();if(!S.connected||!S.dataOnline)refresh()}},30000);
@@ -501,7 +508,7 @@ async function send() {
   let input = $("#message-input");
   let body = input.value.trim();
   if (!body) return;
-  if(S.older&&!S.edit){await showLatest();input=$('#message-input')}
+  const wasOlder=S.older||loadingOlder,epoch=sessionEpoch;
   if (S.edit) {
     const edit=S.edit,mid=edit.id,epoch=sessionEpoch;if(edit.saving)return;edit.saving=true;
     try {
@@ -519,7 +526,8 @@ async function send() {
     }finally{edit.saving=false}
     return;
   }
-  const m = { id: crypto.randomUUID(), seq: Math.max(0, ...S.messages.map((x) => x.seq || 0)) + 1, sender: S.user.id, body, created_at: (/* @__PURE__ */ new Date()).toISOString(), reply_to: S.reply?.id || null, pending: true };
+  S.older=false;S.newMessages=false;
+  const m = { id: crypto.randomUUID(), seq: Math.max(S.latestSeq||0, ...S.messages.map((x) => x.seq || 0)) + 1, sender: S.user.id, body, created_at: (/* @__PURE__ */ new Date()).toISOString(), reply_to: S.reply?.id || null, pending: true };
   S.messages.push(m);
   draft = "";
   flushStash();
@@ -528,7 +536,9 @@ async function send() {
   S.reply = null;
   $("#reply-container").innerHTML = "";
   updateMessages(true);
-  await transmit(m);
+  const sending=transmit(m);
+  if(wasOlder)showLatest().catch(()=>{if(epoch===sessionEpoch)toast('Your message is sending. Earlier messages will reload when the connection recovers.')});
+  await sending;
 }
 async function transmit(m) {
   if(m.pending&&m.transmitting)return;
@@ -765,6 +775,7 @@ async function action(a, el) {
     const view = $("#messages"), height = view.scrollHeight, top = view.scrollTop;const anchor=[...view.querySelectorAll("[data-message]")].find(e=>e.getBoundingClientRect().bottom>view.getBoundingClientRect().top),anchorId=anchor?.dataset.message,anchorTop=anchor?.getBoundingClientRect().top;
     try {
       await loadMessages(Math.min(...S.messages.filter((m2) => !m2.pending && !m2.failed).map((m2) => m2.seq)));
+      if(!S.older)return;
       updateMessages(false);
       requestAnimationFrame(()=>{const kept=[...view.querySelectorAll("[data-message]")].find(e=>e.dataset.message===anchorId);view.scrollTop=kept&&anchorTop!==undefined?view.scrollTop+kept.getBoundingClientRect().top-anchorTop:top+view.scrollHeight-height});
     } catch {
@@ -903,6 +914,7 @@ document.addEventListener('visibilitychange',()=>{
 window.addEventListener('online',()=>{if(S.user&&!S.demo){if(!channel)startRealtime();refresh()}updateStatus()});
 window.addEventListener('offline',updateStatus);
 window.addEventListener('pagehide',flushStash);
+window.addEventListener('pageshow',event=>{if(event.persisted&&S.user&&!S.demo){stop(true);startRealtime();refresh()}});
 login();
 // The public login and sample don't download or initialize the messaging SDK.
 let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
