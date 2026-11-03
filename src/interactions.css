@@ -1,7 +1,7 @@
 .nav-unread{margin-left:auto;background:var(--accent);color:var(--bg);border-radius:8px;padding:2px 6px;font-size:8px;font-weight:600}.dot{animation:none;box-shadow:none}.app-hidden *{animation-play-state:paused!important}
 /* Animate: feedback, spatial consistency and state indication. No message entrances. */
 .receipt{display:inline-flex;align-items:center;gap:5px}.receipt-checks{width:19px;height:14px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.receipt-checks .second{opacity:0}.receipt[data-status="Delivered"] .second,.receipt[data-status="Read"] .second{opacity:1;animation:tick-arrive .2s ease-out}.receipt[data-status="Read"]{color:var(--accent)}.receipt[data-status="Read"] .receipt-checks{animation:read-bloom .28s ease-out}.receipt[data-status="Sending"] .receipt-checks{opacity:.4}.receipt[data-status="Failed"]{color:#e79b9b}@keyframes tick-arrive{from{opacity:0;transform:translateX(-3px)}to{opacity:1;transform:none}}@keyframes read-bloom{50%{opacity:.55;transform:scale(1.08)}}
-.unread-divider{display:flex;align-items:center;gap:14px;margin:25px 0;color:var(--accent);font-size:10px}.unread-divider:before,.unread-divider:after{content:"";height:1px;background:var(--line);flex:1}.message:last-child .bubble{animation:glass-arrive .2s ease-out}
+.unread-divider{display:flex;align-items:center;gap:14px;margin:25px 0;color:var(--accent);font-size:10px}.unread-divider:before,.unread-divider:after{content:"";height:1px;background:var(--line);flex:1}
 
 /* Independent scale preserves positioned game markers and swipe transforms. */
 button:disabled{scale:1}

@@ -60,7 +60,7 @@ async function restoreSession(){
  try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
  catch(error){if(isConnectionError(error))connectionScreen(error);else{login();$('#login-error').textContent=explainError(error)}}
 }
-const renderSignatures=new WeakMap();
+const renderSignatures=new WeakMap(),receiptTimes=new WeakMap();
 const clockFormat=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'});
 const dayFormat=new Intl.DateTimeFormat(undefined,{month:'long',day:'numeric',year:'numeric'});
 const PAGE_SIZE=50,WINDOW_SIZE=matchMedia("(max-width:700px)").matches?100:200;
@@ -367,9 +367,12 @@ function receipt(){
 }
 function updateReceipts(){
  if(S.page!=='chat')return;
+ const messages=new Map(S.messages.map(m=>[m.id,m]));
  for(const el of document.querySelectorAll('[data-receipt]')){
-  const m=S.messages.find(m=>m.id===el.dataset.receipt);if(!m)continue;
-  const stamp=el.closest('[data-message]')?.querySelector('.message-time'),label=time(m.created_at)+(m.edited_at&&!m.deleted?' · edited':'');if(stamp&&stamp.textContent!==label)stamp.textContent=label;const status=receiptLabel(m,S.partner);if(el.dataset.status===status)continue;
+  const m=messages.get(el.dataset.receipt);if(!m)continue;
+  const stamp=el.closest('[data-message]')?.querySelector('.message-time'),key=m.created_at+'|'+(m.edited_at||'')+'|'+!!m.deleted;
+  if(stamp&&receiptTimes.get(stamp)!==key){const label=time(m.created_at)+(m.edited_at&&!m.deleted?' · edited':'');if(stamp.textContent!==label)stamp.textContent=label;receiptTimes.set(stamp,key)}
+  const status=receiptLabel(m,S.partner);if(el.dataset.status===status)continue;
   el.dataset.status=status;el.innerHTML=receiptHTML(m);
  }
 }
