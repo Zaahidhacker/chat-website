@@ -34,5 +34,6 @@ jobs:
       - run: npm run test:design
       - run: npm run test:replies
       - run: npm run test:latency
+      - run: npm run test:foreground
       - run: npm run test:robustness
       - run: npm run test:accessibility

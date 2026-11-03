@@ -4,7 +4,7 @@ export const users=[
  {id:'10000000-0000-0000-0000-000000000001',email:'boy@test.invalid',name:'Zaahid'},
  {id:'10000000-0000-0000-0000-000000000002',email:'girl@test.invalid',name:'Layaana'}
 ];
-export function createFixture(seed=350,{sessionSeconds=3600}={}){
+export function createFixture(seed=350,{sessionSeconds=3600,presenceStateFirst=false}={}){
  let sequence=0,revision=0;const sockets=new Set(),requests=[],messages=[];
  const presenceEvents=[];
  const transport={inboundBytes:0,outboundBytes:0};
@@ -99,7 +99,7 @@ export function createFixture(seed=350,{sessionSeconds=3600}={}){
    route.onMessage(raw=>{transport.inboundBytes+=Buffer.byteLength(String(raw));const parsed=JSON.parse(String(raw));ws.arrayProtocol=Array.isArray(parsed);const [joinRef,ref,topic,event,payload]=ws.arrayProtocol?parsed:[parsed.join_ref,parsed.ref,parsed.topic,parsed.event,parsed.payload];
     if(event==='phx_join'){
      ws.uid=identity(payload.access_token);const subscriptions=(payload.config.postgres_changes||[]).map((s,i)=>({...s,id:i+1}));const privatePresence=topic==='realtime:universe-presence:two';if(privatePresence&&(!payload.config.private||!members.some(m=>m.user_id===ws.uid))){ws.send([joinRef,ref,topic,'phx_reply',{status:'error',response:{reason:'Forbidden'}}]);return}ws.channels.set(topic,{subscriptions,key:payload.config.presence?.key,tracked:null});if(privatePresence)presenceEvents.push({action:'join',uid:ws.uid,private:payload.config.private});
-     ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{postgres_changes:subscriptions}}]);if(topic==='realtime:universe-presence:two')ws.send([joinRef,null,topic,'presence_state',presenceState(topic)]);
+     if(privatePresence&&presenceStateFirst)ws.send([joinRef,null,topic,'presence_state',presenceState(topic)]);ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{postgres_changes:subscriptions}}]);if(privatePresence&&!presenceStateFirst)ws.send([joinRef,null,topic,'presence_state',presenceState(topic)]);
     }else if(event==='presence'){const c=ws.channels.get(topic);if(payload.event==='track'&&c){untrack(ws,topic);c.tracked={...payload.payload,phx_ref:crypto.randomUUID()};presenceEvents.push({action:'track',uid:ws.uid});presenceDiff(topic,{[c.key]:{metas:[c.tracked]}})}else if(payload.event==='untrack'){presenceEvents.push({action:'untrack',uid:ws.uid});untrack(ws,topic)}ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{}}]);
     }else if(event==='heartbeat'||event==='phx_leave'){if(event==='phx_leave'){untrack(ws,topic);ws.channels.delete(topic)}ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{}}]);}
    });route.onClose(()=>{sockets.delete(ws);for(const topic of ws.channels.keys())untrack(ws,topic)});

@@ -332,7 +332,7 @@ function startRealtime(){
   if(nameChanged&&$('#partner-name'))$('#partner-name').textContent=S.partner.name;
   if(receiptsChanged)updateReceipts();updateStatus();
   const t=$('#typing');clearTimeout(typingTimer);
-  if(t)t.innerHTML=p.new.share_presence&&p.new.typing_until&&new Date(p.new.typing_until)>new Date()?'<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>'+esc(S.partner.name||'Your person')+' is typing…</span>':'';
+  if(t)t.innerHTML=!livePresence?.departedAt(p.new.user_id)&&p.new.share_presence&&p.new.typing_until&&new Date(p.new.typing_until)>new Date()?'<span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span><span>'+esc(S.partner.name||'Your person')+' is typing…</span>':'';
   typingTimer=setTimeout(()=>{if($('#typing'))$('#typing').textContent='';updateStatus()},Math.min(10000,Math.max(0,Date.parse(p.new.typing_until)-Date.now())||0)+50);
  })
  .on('postgres_changes',{event:'*',schema:'public',table:'universe_reactions'},p=>{
@@ -362,7 +362,8 @@ function startRealtime(){
 }
 function updateStatus(){
  chatView?.unread(S);const el=$('#partner-status');if(!el)return;
- const activity=chatView.presenceLabel(S.partner,{connected:S.connected||S.demo,live:S.demo||livePresence?.online(S.partner?.user_id)});
+ if(livePresence?.departedAt(S.partner?.user_id)){clearTimeout(typingTimer);$('#typing')?.replaceChildren()}
+ const activity=chatView.presenceLabel(S.partner,{connected:S.connected||S.demo,live:S.demo||livePresence?.online(S.partner?.user_id),departedAt:livePresence?.departedAt(S.partner?.user_id)});
  const text=!navigator.onLine?'Offline · your messages are safe to retry':S.dataOnline===false?'Connection interrupted · retrying…':!S.connected&&!S.demo?'Connecting · checking for messages':activity.text;
  el.innerHTML=(activity.online&&navigator.onLine&&S.dataOnline!==false?'<span class="dot"></span> ':'')+esc(text);el.title=activity.title||'';
 

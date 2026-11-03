@@ -1,7 +1,8 @@
 // Private Presence is connection state, never an authorization or identity decision.
-// A short server-timestamp lease additionally bounds stale state after abrupt loss.
+// Foreground membership drives Online; observed departures drive last seen.
 export function createPresence(db,{userId,member,onChange}){
- let subscribed=false,closed=false,desired=false,tracked=false,busy=false,known=false,revision=0,retries=0,retryTimer;
+ let subscribed=false,closed=false,desired=false,tracked=false,busy=false,known=false,revision=0,retries=0,retryTimer,active=new Set();
+ const departures=new Map();
  const room=db.channel('universe-presence:two',{config:{private:true,presence:{key:userId}}});
  const available=()=>!closed&&!document.hidden&&navigator.onLine&&!!member()?.share_presence;
  function leaveStamp(){Promise.resolve(db.rpc('universe_presence_leave')).catch(()=>{})}
@@ -17,10 +18,10 @@ export function createPresence(db,{userId,member,onChange}){
  }
  function reconcile(){const next=available();if(desired!==next){clearTimeout(retryTimer);retries=0;if(desired&&!next)leaveStamp()}desired=next;drain()}
 
- function sync(){known=true;onChange()}
- room.on('presence',{event:'sync'},sync).subscribe(status=>{if(closed)return;revision++;known=false;tracked=false;retries=0;clearTimeout(retryTimer);subscribed=status==='SUBSCRIBED';if(!subscribed)onChange();else{reconcile();onChange()}});
+ function sync(){const next=new Set(Object.entries(room.presenceState()).filter(([,list])=>list.some(p=>p.active===true)).map(([id])=>id));for(const id of active)if(!next.has(id))departures.set(id,Date.now());for(const id of next)departures.delete(id);active=next;known=true;onChange()}
+ room.on('presence',{event:'sync'},sync).subscribe(status=>{if(closed)return;revision++;tracked=false;retries=0;clearTimeout(retryTimer);subscribed=status==='SUBSCRIBED';if(!subscribed){known=false;active=new Set();onChange()}else{reconcile();onChange()}});
  const visibility=()=>reconcile(),online=()=>reconcile();
  const pagehide=()=>{if(desired)leaveStamp();desired=false;if(subscribed)room.untrack().catch(()=>{})};
  document.addEventListener('visibilitychange',visibility);window.addEventListener('online',online);window.addEventListener('offline',online);window.addEventListener('pagehide',pagehide);
- return {reconcile,online(id){return !closed&&subscribed&&known&&!!room.presenceState()[id]?.some(p=>p.active===true)},close(){if(closed)return;if(desired)leaveStamp();closed=true;revision++;clearTimeout(retryTimer);desired=false;document.removeEventListener('visibilitychange',visibility);window.removeEventListener('online',online);window.removeEventListener('offline',online);window.removeEventListener('pagehide',pagehide);db.removeChannel(room);onChange()}};
+ return {reconcile,online(id){return !closed&&subscribed&&known&&active.has(id)},departedAt(id){return !closed&&subscribed&&known?departures.get(id):undefined},close(){if(closed)return;if(desired)leaveStamp();closed=true;revision++;clearTimeout(retryTimer);desired=false;document.removeEventListener('visibilitychange',visibility);window.removeEventListener('online',online);window.removeEventListener('offline',online);window.removeEventListener('pagehide',pagehide);db.removeChannel(room);onChange()}};
 }
