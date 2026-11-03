@@ -17,7 +17,7 @@ export async function resilientFetch(input, init) {
   const abort=()=>controller.abort(source.reason);
   if(source?.aborted)abort();else source?.addEventListener('abort',abort,{once:true});
   const timer=setTimeout(()=>controller.abort(new DOMException('Connection timed out.','TimeoutError')),30000);
-  try { return await fetch(input instanceof Request?input.clone():input,{...init,signal:controller.signal}); }
+  try { return await fetch(input instanceof Request?input.clone():input,{...init,keepalive:/\/rpc\/universe_presence_leave$/.test(url)||init?.keepalive,signal:controller.signal}); }
   catch (error) {
    if (!safe || attempt || !navigator.onLine || source?.aborted) throw error;
   }

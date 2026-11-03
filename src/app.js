@@ -7,7 +7,7 @@ import { linkify } from './links.js';
 import { attachSwipeReply } from './swipe.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
-let db,clientReady,chatView,voiceAPI;
+let db,clientReady,chatView,voiceAPI,livePresence;
 let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
 const authStorage={getItem:key=>sessionStorage.getItem(key)||localStorage.getItem(key),setItem:(key,value)=>{const chosen=rememberWorld?localStorage:sessionStorage,other=rememberWorld?sessionStorage:localStorage;chosen.setItem(key,value);other.removeItem(key)},removeItem:key=>{sessionStorage.removeItem(key);localStorage.removeItem(key)}};
 function ensureClient(){
@@ -138,6 +138,7 @@ function restoreOutbox() {
   }
 }
 function stop(){
+ livePresence?.close();livePresence=null;
  voiceAPI?.dispose();
  if(channel&&db){db.removeChannel(channel);channel=null}
  clearInterval(pulse);clearInterval(presenceClock);clearTimeout(typingTimer);clearTimeout(hiddenPause);receiptScheduler?.close();receiptScheduler=null;
@@ -295,6 +296,7 @@ async function refresh(){
 function startRealtime(){
  if(channel)return;
  const epoch=sessionEpoch;
+ livePresence??=chatView.createPresence(db,{userId:S.user.id,member:()=>S.me,onChange:updateStatus});
  db.realtime.setAuth();
  receiptScheduler?.close();
  receiptScheduler=createReceiptScheduler(async values=>{const {error}=await db.rpc('universe_receipt',values);if(error)throw error});
@@ -316,7 +318,7 @@ function startRealtime(){
  })
  .on('postgres_changes',{event:'UPDATE',schema:'public',table:'universe_members'},p=>{
   if(epoch!==sessionEpoch)return;
-  if(p.new.user_id===S.user.id){S.me=p.new;chatView.unread(S);return}
+  if(p.new.user_id===S.user.id){S.me=p.new;livePresence?.reconcile();chatView.unread(S);return}
   const nameChanged=S.partner?.name!==p.new.name;const receiptsChanged=S.partner?.last_read!==p.new.last_read||S.partner?.last_delivered!==p.new.last_delivered;S.partner=p.new;
   if(nameChanged&&$('#partner-name'))$('#partner-name').textContent=S.partner.name;
   if(receiptsChanged)updateReceipts();updateStatus();
@@ -350,7 +352,7 @@ function startRealtime(){
 }
 function updateStatus(){
  chatView?.unread(S);const el=$('#partner-status');if(!el)return;
- const activity=chatView.presenceLabel(S.partner,{connected:S.connected||S.demo});
+ const activity=chatView.presenceLabel(S.partner,{connected:S.connected||S.demo,live:S.demo||livePresence?.online(S.partner?.user_id)});
  const text=!navigator.onLine?'Offline · your messages are safe to retry':S.dataOnline===false?'Connection interrupted · retrying…':!S.connected&&!S.demo?'Connecting · checking for messages':activity.text;
  el.innerHTML=(activity.online&&navigator.onLine&&S.dataOnline!==false?'<span class="dot"></span> ':'')+esc(text);el.title=activity.title||'';
 
@@ -371,6 +373,7 @@ function updateReceipts(){
 function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))}
 
 function render() {
+ livePresence?.reconcile();
   ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
   $("#app").innerHTML=chatView.shellHTML({S,theme,logo,ib,icon,esc,chatHTML,pageViews,pageContext,secondaryPlaceholder});
   updateRelationship();document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(document.body.classList.contains('quiet-sky'))));
@@ -480,7 +483,7 @@ function updateMessages(force){
  });
 }
 function replyHTML() {
-  return S.reply || S.edit ? `<div class="reply-bar">${icon(S.edit ? "note" : "reply")}<div><b>${S.edit ? "Editing your message" : "Replying to " + esc(S.reply.sender === S.user.id ? "yourself" : S.partner?.name || "your person")}</b><br>${esc((S.edit || S.reply).body.slice(0, 110))}</div>${ib("close", "Cancel", "cancel-reply")}</div>` : "";
+  return S.reply || S.edit ? `<div class="reply-bar">${icon(S.edit ? "note" : "reply")}<div><b>${S.edit ? "Editing your message" : "Replying to " + esc(S.reply.sender === S.user.id ? "yourself" : S.partner?.name || "your person")}</b><span class="reply-preview-text">${esc((S.edit || S.reply).body.slice(0,110))}</span></div>${ib("close", "Cancel", "cancel-reply")}</div>` : "";
 }
 function beginReply(m){
  if(S.edit)draft=S.editDraft||'';S.reply=m;S.edit=null;closeModal();
@@ -728,12 +731,12 @@ async function action(a, el) {
     return;
   }
   if (a === "presence") {
-    S.me.share_presence = !S.me.share_presence;
+    S.me.share_presence = !S.me.share_presence;livePresence?.reconcile();
     try {
       await changeSettings();
       render();
     } catch {
-      S.me.share_presence = !S.me.share_presence;
+      S.me.share_presence = !S.me.share_presence;livePresence?.reconcile();
       toast("Couldn\u2019t update privacy settings.");
     }
     return;

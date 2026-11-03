@@ -20,3 +20,22 @@
 @media(max-width:360px){.chat-header{padding-inline:9px;gap:6px}.chat-header small{max-width:119px}.header-actions .icon-btn{width:28px;min-width:28px}.mobile-milestone{gap:4px;padding-inline:7px}.mobile-milestone b{display:none}.dream-charms .petal-charm i{display:none}.composer .ritual-compose{display:none}.bubble{font-size:12px}.dream-login>header{padding-inline:18px}.dream-login>main{padding-inline:16px}}
 @media(prefers-reduced-motion:reduce){.dream-charms button,.dream-login *{animation:none!important;transition:none!important}}
 .composer textarea:not(:focus){white-space:nowrap;text-overflow:ellipsis}.composer textarea:focus{white-space:pre-wrap}
+/* Give quoted replies a distinct inset and keep names away from the accent rail. */
+.bubble .quote{margin:0 0 12px;padding:10px 12px;border-left:3px solid #f2b6cf;border-radius:4px 12px 12px 4px;background:#ffb7cf0c;line-height:1.6;font-size:.9em;overflow:hidden;min-width:0;color:inherit}
+.bubble .quote strong{display:block;margin:0 0 5px;font-size:11px;line-height:1.4;font-weight:600;color:var(--accent)}
+.own .bubble .quote{background:#40132b14;border-left-color:#752b4c}.own .bubble .quote strong{color:#552039}
+.quote-text{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.reply-bar{display:flex;align-items:center;gap:12px;max-width:940px;margin:0 auto 10px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;padding:10px 12px;background:var(--panel)}
+.reply-bar>div{flex:1;min-width:0}.reply-bar b{display:block;margin-bottom:4px;font-size:11px;line-height:1.5}.reply-preview-text{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;font-size:12px;line-height:1.6;color:var(--muted)}.reply-bar>.icon{width:17px;height:17px}.reply-bar .icon-btn{width:36px;min-width:36px;min-height:36px;padding:8px;margin-left:0}
+.bubble{box-shadow:0 4px 15px #0002}.own .bubble{box-shadow:0 4px 16px #f472b61c}.message-actions{align-self:flex-end;margin-bottom:18px}
+@media(max-width:700px){
+ .mobile-milestone b,.mobile-milestone>span:first-child{display:none}.mobile-milestone{justify-content:flex-end;padding:7px 16px 0;min-height:26px;background:var(--side)}.mobile-milestone>span:nth-child(2){padding:0;border:0;background:none;color:var(--muted);font-size:9px}
+ .main>.banner:not(.demo-banner),.main>.dream-charms,.composer-footer{display:none}
+ .chat-header{min-height:66px;height:66px;padding:4px 16px 12px;gap:10px}.chat-header small{max-width:195px;white-space:nowrap;font-size:10px}.chat-header .header-actions{gap:4px}.chat-header .header-actions .icon-btn{width:32px;min-width:32px;height:36px}
+ .messages{padding:18px 16px 16px}.message{margin:16px 0}.message.grouped{margin-top:7px}.message-main{max-width:calc(100% - 28px)}.bubble{padding:13px 15px;font-size:13px;line-height:1.7}.bubble .quote{padding:10px 12px;margin-bottom:11px;font-size:12px}.bubble .quote strong{font-size:11px}
+ .message-actions{opacity:.28;transition:opacity 125ms ease}.message:focus-within .message-actions,.message:hover .message-actions{opacity:1}.message-actions:focus-within{opacity:1}
+ .composer-area{padding:8px 12px 10px;background:var(--bg)}.composer{padding:6px 7px;min-height:54px;gap:2px}.composer .ritual-compose{display:none}.composer .icon-btn{min-width:30px;width:30px;height:40px}.composer .send{min-width:38px;width:38px;height:38px}.composer textarea{padding-inline:6px}.reply-bar{margin:0 3px 10px;padding:10px 12px;gap:10px}.mobile-spaces{min-height:58px}
+}
+@media(max-width:360px){.chat-header{padding-inline:12px;gap:8px}.chat-header small{max-width:150px}.chat-header .header-actions .icon-btn{width:28px;min-width:28px}.messages{padding-inline:12px}.composer .icon-btn{min-width:28px;width:28px}}
+
+.partner-identity{flex:1;min-width:0}.chat-header h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-header #partner-status{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.chat-header .header-actions{flex-shrink:0}
