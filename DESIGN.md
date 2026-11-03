@@ -11,3 +11,11 @@ Wishing-star charms prepare an unsent draft. Thinking-of-you charms and the dail
 Calling is removed: no call controls, source bundle, signaling subscription or call microphone request. Existing backend data and the earlier expiry job are retained. Voice notes still work separately. No database, Supabase account, storage or game-progress migration was performed for this redesign.
 
 The new chat styles load with the existing signed-in view and are awaited before its first render, preventing a layout flash and preserving the first scroll position. The cold entry JS/CSS remains below the unchanged 25,000-byte gzip guard. Tests use synthetic accounts and deterministic transport; no private messages were sent or modified to test the redesign. Physical Android/iPhone and live-network delivery are not established by these fixtures.
+
+## Reliability and readability polish — November 3, 2026
+
+The supplied baby-pink/Poppins/Caveat design and existing navigation remain. Voice dialogs now have a distinct heart mark, a readable recording clock, native playback, size/duration details and a clear re-record/send hierarchy. The clock is hidden from the accessibility tree so its one-second updates do not repeatedly announce over the recording instructions. Mobile inputs use 16px text to avoid iOS focus zoom. Light-theme sidebar labels and phone message actions have stronger contrast; dialogs use their visible heading as an accessible name and keep native media controls in the keyboard focus sequence.
+
+Search operates on loaded messages without extra database requests. Its compact result cards show author and time, safely highlight matching text, keep long messages to contextual snippets, and return to the chosen message with a temporary outline. Closed or superseded lazy-loaded dialogs cannot reopen after a slow import finishes. Existing games, personal content, reply spacing and reduced-motion behavior are preserved.
+
+Signed-in icon paths now load with the conversation; the public login retains only the two paths it can need before sign-in. All 24 original paths are unchanged. Initial JavaScript and CSS total 24,057 bytes gzip under the unchanged 25,000-byte guard. The new axe-core dependency is a development-only accessibility test tool and is not bundled into the site.

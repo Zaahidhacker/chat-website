@@ -4,16 +4,17 @@ export const users=[
  {id:'10000000-0000-0000-0000-000000000001',email:'boy@test.invalid',name:'Zaahid'},
  {id:'10000000-0000-0000-0000-000000000002',email:'girl@test.invalid',name:'Layaana'}
 ];
-export function createFixture(seed=350){
+export function createFixture(seed=350,{sessionSeconds=3600}={}){
  let sequence=0,revision=0;const sockets=new Set(),requests=[],messages=[];
  const presenceEvents=[];
+ const transport={inboundBytes:0,outboundBytes:0};
  const members=users.map((u,i)=>({user_id:u.id,name:u.name,slot:i+1,share_presence:true,last_seen:null,typing_until:null,last_delivered:0,last_read:0}));
  const preferences=new Map(users.map(u=>[u.id,{user_id:u.id,cleared_through:0,theme:'dark'}]));
  const favorites=new Map(users.map(u=>[u.id,new Set()])),hidden=new Map(users.map(u=>[u.id,new Set()]));
- const reactions=[];let loseNextResponse=false;const photos=new Map(),objects=new Map(),gardenEvents=new Map(),gardenAnswers=new Map();let failPhotoUpload=false;
+ const reactions=[];let loseNextResponse=false;const photos=new Map(),objects=new Map(),voices=new Map(),gardenEvents=new Map(),gardenAnswers=new Map();let failPhotoUpload=false;
  const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Colombo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const gardenState=uid=>({day:day(),xp:[...gardenEvents.values()].reduce((n,e)=>n+e.points,0),done:[...gardenEvents.values()].filter(e=>e.user_id===uid).map(e=>e.kind),care:[...gardenEvents.values()].filter(e=>['water','feed'].includes(e.kind)),answers:[...gardenAnswers.values()].filter(a=>a.user_id===uid||gardenAnswers.has(uid)),partnerAnswered:[...gardenAnswers.values()].some(a=>a.user_id!==uid),memories:[]});
- const jwt=user=>[btoa(JSON.stringify({alg:'HS256',typ:'JWT'})),btoa(JSON.stringify({sub:user.id,email:user.email,role:'authenticated',exp:Math.floor(Date.now()/1000)+3600})),btoa('test-only')].join('.');
+ const jwt=user=>[btoa(JSON.stringify({alg:'HS256',typ:'JWT'})),btoa(JSON.stringify({sub:user.id,email:user.email,role:'authenticated',exp:Math.floor(Date.now()/1000)+sessionSeconds})),btoa('test-only')].join('.');
  function identity(token){try{return JSON.parse(atob(token.split('.')[1])).sub}catch{return null}}
  function canView(m,uid){return members.some(u=>u.user_id===uid)&&!hidden.get(uid).has(m.id)&&(m.seq>preferences.get(uid).cleared_through||favorites.get(uid).has(m.id))}
  function event(table,type,record,old={}){
@@ -51,7 +52,7 @@ export function createFixture(seed=350){
     await route.fulfill({status:200,headers:{...headers,'content-type':'image/jpeg'},body:stored});return;
    }
    if(path==='/auth/v1/token'){
-    const u=users.find(u=>u.email===body.email||body.refresh_token==='test-refresh-'+u.id);if(!u){data={msg:'Invalid login credentials'};status=400}else data={access_token:jwt(u),refresh_token:'test-refresh-'+u.id,token_type:'bearer',expires_in:3600,expires_at:Math.floor(Date.now()/1000)+3600,user:{id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{},created_at:new Date().toISOString()}};
+    const u=users.find(u=>u.email===body.email||body.refresh_token==='test-refresh-'+u.id);if(!u){data={msg:'Invalid login credentials'};status=400}else data={access_token:jwt(u),refresh_token:'test-refresh-'+u.id,token_type:'bearer',expires_in:sessionSeconds,expires_at:Math.floor(Date.now()/1000)+sessionSeconds,user:{id:u.id,email:u.email,aud:'authenticated',role:'authenticated',app_metadata:{provider:'email',providers:['email']},user_metadata:{},created_at:new Date().toISOString()}};
    }else if(path==='/auth/v1/logout'){data={};}
    else if(!uid){status=401;data={message:'Not authenticated'};}
    else if(path.endsWith('/rpc/universe_sync_state'))data={members,preferences:preferences.get(uid),favorites:[...favorites.get(uid)],hidden:[...hidden.get(uid)],revision};
@@ -60,6 +61,8 @@ export function createFixture(seed=350){
    }else if(path.endsWith('/rpc/universe_send_photo')){
     const p=photos.get(body.mid);if(!p||p.owner_id!==uid||!objects.has('universe-photos:'+p.path)||!objects.has('universe-thumbs:'+p.path)){status=400;data={message:'Incomplete photo'}}else{p.sent=true;data=add(uid,'📷 '+(body.caption||'Photo'),body.mid,body.reply);event('universe_photos','UPDATE',p);if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Acknowledgement lost after photo commit'}}}
    }else if(path.endsWith('/universe_photos')){const ids=url.searchParams.get('id');const set=ids?.startsWith('in.(')?new Set(ids.slice(4,-1).split(',')):null;data=[...photos.values()].filter(p=>(!set||set.has(p.id))&&(p.owner_id===uid&&!p.sent||p.sent&&canView(messages.find(m=>m.id===p.id),uid)))}
+   else if(path.endsWith('/rpc/universe_send_voice')){if(!voices.has(body.mid))voices.set(body.mid,{id:body.mid,audio:body.encoded,mime:body.mime_type,expires_at:new Date(Date.now()+48*3600000).toISOString()});data=add(uid,'🎙 Voice note · expires in 48 hours',body.mid,body.reply);if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Acknowledgement lost after voice commit'}}}
+   else if(path.endsWith('/universe_voice')){const id=url.searchParams.get('id')?.slice(3),voice=voices.get(id),m=messages.find(m=>m.id===id);data=voice&&Date.parse(voice.expires_at)>Date.now()&&m&&!m.deleted&&canView(m,uid)?[voice]:[]}
    else if(path.endsWith('/rpc/universe_garden_state'))data=gardenState(uid);
    else if(path.endsWith('/rpc/universe_garden_act')){const points={feed:3,water:3,question:5,pairs:4,code:4,moon:1};const key=uid+':'+body.activity;if(points[body.activity]&&!gardenEvents.has(key))gardenEvents.set(key,{user_id:uid,kind:body.activity,points:points[body.activity]});if(body.activity==='question'&&!gardenAnswers.has(uid))gardenAnswers.set(uid,{user_id:uid,day:day(),answer:body.note});data=gardenState(uid)}
    else if(path.endsWith('/rpc/universe_send')){
@@ -92,8 +95,8 @@ export function createFixture(seed=350){
    await route.fulfill({status,headers,body:serialized});
   });
   await context.routeWebSocket('wss://jczsnrzqocstbpsgwkdy.supabase.co/**',route=>{
-   const ws={route,uid:null,channels:new Map(),paused:false,arrayProtocol:false,send(parts){const [join_ref,ref,topic,event,payload]=parts;route.send(JSON.stringify(ws.arrayProtocol?parts:{join_ref,ref,topic,event,payload}))}};sockets.add(ws);
-   route.onMessage(raw=>{const parsed=JSON.parse(String(raw));ws.arrayProtocol=Array.isArray(parsed);const [joinRef,ref,topic,event,payload]=ws.arrayProtocol?parsed:[parsed.join_ref,parsed.ref,parsed.topic,parsed.event,parsed.payload];
+   const ws={route,uid:null,channels:new Map(),paused:false,arrayProtocol:false,send(parts){const [join_ref,ref,topic,event,payload]=parts;const encoded=JSON.stringify(ws.arrayProtocol?parts:{join_ref,ref,topic,event,payload});transport.outboundBytes+=Buffer.byteLength(encoded);route.send(encoded)}};sockets.add(ws);
+   route.onMessage(raw=>{transport.inboundBytes+=Buffer.byteLength(String(raw));const parsed=JSON.parse(String(raw));ws.arrayProtocol=Array.isArray(parsed);const [joinRef,ref,topic,event,payload]=ws.arrayProtocol?parsed:[parsed.join_ref,parsed.ref,parsed.topic,parsed.event,parsed.payload];
     if(event==='phx_join'){
      ws.uid=identity(payload.access_token);const subscriptions=(payload.config.postgres_changes||[]).map((s,i)=>({...s,id:i+1}));const privatePresence=topic==='realtime:universe-presence:two';if(privatePresence&&(!payload.config.private||!members.some(m=>m.user_id===ws.uid))){ws.send([joinRef,ref,topic,'phx_reply',{status:'error',response:{reason:'Forbidden'}}]);return}ws.channels.set(topic,{subscriptions,key:payload.config.presence?.key,tracked:null});if(privatePresence)presenceEvents.push({action:'join',uid:ws.uid,private:payload.config.private});
      ws.send([joinRef,ref,topic,'phx_reply',{status:'ok',response:{postgres_changes:subscriptions}}]);if(topic==='realtime:universe-presence:two')ws.send([joinRef,null,topic,'presence_state',presenceState(topic)]);
@@ -102,8 +105,8 @@ export function createFixture(seed=350){
    });route.onClose(()=>{sockets.delete(ws);for(const topic of ws.channels.keys())untrack(ws,topic)});
   });
  }
- return {install,users,messages,members,requests,presenceEvents,add,preferences,favorites,hidden,reactions,
-  broadcast(table,type,record){event(table,type,record)},photos,objects,gardenEvents,gardenAnswers,failNextPhotoUpload(){failPhotoUpload=true},
+ return {install,users,messages,members,requests,presenceEvents,transport,add,preferences,favorites,hidden,reactions,
+  broadcast(table,type,record){event(table,type,record)},photos,objects,voices,gardenEvents,gardenAnswers,failNextPhotoUpload(){failPhotoUpload=true},
   pause(uid,paused=true){for(const ws of sockets)if(ws.uid===uid)ws.paused=paused},
   loseNextAcknowledgement(){loseNextResponse=true},
   editOffline(id,body){const m=messages.find(m=>m.id===id);m.body=body;m.revision=++revision;m.edited_at=new Date().toISOString();return m}

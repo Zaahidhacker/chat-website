@@ -9,10 +9,9 @@ const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
 let db,clientReady,chatView,voiceAPI,livePresence;
 let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
-const authStorage={getItem:key=>sessionStorage.getItem(key)||localStorage.getItem(key),setItem:(key,value)=>{const chosen=rememberWorld?localStorage:sessionStorage,other=rememberWorld?sessionStorage:localStorage;chosen.setItem(key,value);other.removeItem(key)},removeItem:key=>{sessionStorage.removeItem(key);localStorage.removeItem(key)}};
 function ensureClient(){
  if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(async([{createClient},views])=>{await views.ready;chatView=views;
-  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{storage:authStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
+  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{storage:views.createSessionStorage({remember:()=>rememberWorld}),persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
   db.auth.onAuthStateChange((event,session)=>{
    if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login();setNotificationAccount(null)}
    if(event==='TOKEN_REFRESHED'&&session){db.realtime.setAuth(session.access_token)}
@@ -24,8 +23,8 @@ function ensureClient(){
 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-const paths = { mic:"M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3ZM5 10v2a7 7 0 0 0 14 0v-2M12 19v4M8 23h8", photo:"M4 4h16v16H4V4Zm0 12 5-5 4 4 3-3 4 4M15 8h.01", heart: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z", chat: "M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-3 2 1.8-6A8.5 8.5 0 1 1 21 11.5Z", bookmark: "M6 3h12v19l-6-4-6 4V3Z", spark: "m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6L12 2Z", settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm8.5 4 1.5-1-2-3-1.7.5L17 7l-.2-2H7.2L7 7 5.7 8.5 4 8l-2 3 1.5 1L3 14l-1 1 2 3 2-.5L8 19l.2 2h7.6l.2-2 2-1.5 2 .5 2-3-1-1-.5-2Z", lock: "M6 10h12v11H6V10Zm3 0V6a3 3 0 0 1 6 0v4m-3 5v2", moon: "M21 13a9 9 0 0 1-10-10 9 9 0 1 0 10 10Z", sun: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5", arrow: "M5 12h14m-6-6 6 6-6 6", send: "m22 2-7 20-4-9L2 9l20-7ZM11 13 22 2", smile: "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM8 14s1 3 4 3 4-3 4-3M8 9h.01M16 9h.01", more: "M5 12h.01M12 12h.01M19 12h.01", search: "M20 20l-5-5m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z", close: "m6 6 12 12M6 18 18 6", logout: "M9 4H4v16h5m5-13 5 5-5 5M8 12h11", reply: "m9 5-7 7 7 7M2 12h12c4 0 6 2 6 7", trash: "M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7", check: "m4 12 5 5L20 6", menu: "M4 6h16M4 12h16M4 18h16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm13 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z", down: "m6 9 6 6 6-6", note: "M5 3h14v18H5V3Zm4 5h6m-6 4h6m-6 4h3" };
-const icon = (n) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n] || paths.heart}"/></svg>`;
+const paths = {heart:"M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z",arrow:"M5 12h14m-6-6 6 6-6 6"};
+const icon = (n) => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[n] || chatView?.paths[n] || paths.heart}"/></svg>`;
 const ib = (n, title, action2, cl = "") => `<button type="button" class="icon-btn ${cl}" aria-label="${title}" title="${title}" data-action="${action2}">${icon(n)}</button>`;
 const logo = () => `<div class="logo">${icon("heart")}</div>`;
 let S = { user: null, me: null, partner: null, messages: [], favorites: /* @__PURE__ */ new Set(), reactions: [], cutoff: 0, page: "chat", demo: false, reply: null, edit: null, loading: false, hasMore: true, connected: false };
@@ -80,14 +79,18 @@ function toast(t) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.remove("visible"), 4e3);
 }
-let dialogOpener,photoSelection=0;
+let dialogOpener,photoSelection=0,dialogRequest=0;
+async function openDialog(load,view){const request=++dialogRequest,result=await load();if(request===dialogRequest)modal(view(result))}
 function modal(html) {
+  dialogRequest++;
   if(!$("#modal-root").children.length)dialogOpener=document.activeElement;$("#app").inert=true;
   $("#modal-root").innerHTML = `<div class="modal-overlay"><section class="modal" role="dialog" aria-modal="true" aria-label="Conversation action">${ib("close", "Close", "close-modal", "modal-close")}${html}</section></div>`;
+  chatView?.prepareDialog($('.modal'));
   const first = $("button,input,textarea", $(".modal"));
   first?.focus();
 }
 function closeModal() {
+ dialogRequest++;
  voiceAPI?.dispose();
   photoSelection++;photoAPI?.cancelPreview();
   $("#modal-root").innerHTML = "";$("#app").inert=false;if(dialogOpener?.isConnected)dialogOpener.focus({preventScroll:true});dialogOpener=null;
@@ -137,9 +140,9 @@ function restoreOutbox() {
   } catch {
   }
 }
-function stop(){
+function stop(preserveVoice=false){
  livePresence?.close();livePresence=null;
- voiceAPI?.dispose();
+ if(!preserveVoice)voiceAPI?.dispose();
  if(channel&&db){db.removeChannel(channel);channel=null}
  clearInterval(pulse);clearInterval(presenceClock);clearTimeout(typingTimer);clearTimeout(hiddenPause);receiptScheduler?.close();receiptScheduler=null;
  if(renderFrame!==null){cancelAnimationFrame(renderFrame);renderFrame=null}
@@ -497,23 +500,20 @@ async function send() {
   if (!body) return;
   if(S.older&&!S.edit){await showLatest();input=$('#message-input')}
   if (S.edit) {
-    const mid = S.edit.id;
+    const edit=S.edit,mid=edit.id,epoch=sessionEpoch;if(edit.saving)return;edit.saving=true;
     try {
       if (!S.demo) {
         const { error } = await db.rpc("universe_change", { mid, content: body });
         if (error) throw error;
       }
+      if(epoch!==sessionEpoch)return;
       const m2 = S.messages.find((x) => x.id === mid);
-      m2.body = body;
-      m2.edited_at = (/* @__PURE__ */ new Date()).toISOString();
-      S.edit = null;
-      draft = "";stash();
-      input.value = "";
-      $("#reply-container").innerHTML = "";
+      if(m2){m2.body=body;m2.edited_at=new Date().toISOString()}
+      if(S.edit===edit&&input.value.trim()===body){S.edit=null;draft=S.editDraft||'';S.editDraft=null;input.value=draft;input.style.height='auto';$('#reply-container').innerHTML='';stash()}
       updateMessages();
     } catch {
-      toast("Couldn\u2019t save that edit. Please try again.");
-    }
+      if(epoch===sessionEpoch)toast("Couldn\u2019t save that edit. Please try again.");
+    }finally{edit.saving=false}
     return;
   }
   const m = { id: crypto.randomUUID(), seq: Math.max(0, ...S.messages.map((x) => x.seq || 0)) + 1, sender: S.user.id, body, created_at: (/* @__PURE__ */ new Date()).toISOString(), reply_to: S.reply?.id || null, pending: true };
@@ -586,7 +586,7 @@ async function save(m) {
     toast("Couldn\u2019t update your keepsakes. Please try again.");
   }
 }
-async function messageMenu(m){modal((await import('./dialogs.js')).messageDialog(m,pageContext()))}
+async function messageMenu(m){await openDialog(()=>import('./dialogs.js'),v=>v.messageDialog(m,pageContext()))}
 
 async function changeSettings() {
   if (S.demo) return;
@@ -598,23 +598,25 @@ async function action(a, el) {
  if(a.startsWith('space-'))a='page-'+a.slice(6);
  if(a==='ambient-mode'){const quiet=document.body.classList.toggle('quiet-sky');document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(quiet)));try{localStorage.setItem('universe-quiet-sky',String(quiet))}catch{}return}
  if(a==='wishing-star'){prepareDraft('A little wishing star for you ✨ Make a wish, my love.');return}
+ if(a.startsWith('find-message-')){const id=a.slice(13);closeModal();if(S.page!=='chat'){S.page='chat';render()}requestAnimationFrame(()=>{const node=[...document.querySelectorAll('[data-message]')].find(el=>el.dataset.message===id);if(!node){toast('This moment is no longer in the loaded conversation.');return}node.scrollIntoView({block:'center',behavior:'instant'});node.classList.add('message-found');setTimeout(()=>node.classList.remove('message-found'),2200)});return}
 
  if(a==='voice-record'||a.startsWith('voice-play-')){
  if(S.demo){toast('Sign in to use private audio.');return}
- voiceAPI??=await import('./voice.js');const ctx={db,S,modal,toast,done:m=>{applyIncoming([m]);updateMessages(true);closeModal()}};
+ const epoch=sessionEpoch,request=++dialogRequest;voiceAPI??=await import('./voice.js');if(epoch!==sessionEpoch||request!==dialogRequest||!S.user)return;
+ const ctx={db,S,modal,toast,close:closeModal,done:m=>{S.reply=null;$('#reply-container').innerHTML=replyHTML();applyIncoming([m]);updateMessages(true);closeModal()}};
  if(a==='voice-record')await voiceAPI.record(ctx);else await voiceAPI.play(a.slice(11),ctx);return;
  }
 
- if(['options','privacy','clear','emoji','search'].includes(a)){modal((await import('./dialogs.js')).dialogHTML(a,pageContext()));if(a==='search')$('#search-input').focus();return}
+ if(['options','privacy','clear','emoji','search'].includes(a)){await openDialog(()=>import('./dialogs.js'),v=>v.dialogHTML(a,pageContext()));if(a==='search')$('#search-input')?.focus();return}
 
   if(a==='ritual-next'){const views=await secondaryPages();views.nextDate();const card=$('.date-card');if(card){card.outerHTML=views.dateCardHTML(pageContext());$('.date-card [data-action="ritual-next"]')?.focus({preventScroll:true})}return}
   if(a==='ritual-invite'){prepareDraft((await secondaryPages()).todayDate().invite);return}
-  if(a==='little-notes'){const notes=(await secondaryPages()).notes();modal(`<h2>A little “thinking of you.”</h2><p>Choose a note to make your own. Nothing sends automatically.</p><div class="action-list">${notes.map((n,i)=>`<button class="note-draft" data-action="note-draft-${i}">${esc(n)}</button>`).join('')}</div>`);return}
+  if(a==='little-notes'){await openDialog(secondaryPages,v=>`<h2>A little “thinking of you.”</h2><p>Choose a note to make your own. Nothing sends automatically.</p><div class="action-list">${v.notes().map((n,i)=>`<button class="note-draft" data-action="note-draft-${i}">${esc(n)}</button>`).join('')}</div>`);return}
   if(a.startsWith('note-draft-')){prepareDraft((await secondaryPages()).notes()[Number(a.slice(11))]);return}
 
   if(a==='attach-photo'){
    if(S.demo){toast('Sign in to share a private photo.');return}
-   await photos();modal(`<h2>A little moment, shared.</h2><p>Photos are compressed on your device before they leave it.</p><div class="action-list"><button data-action="photo-gallery">Choose from gallery</button><button data-action="photo-camera">Take a photo</button></div><input type="file" id="photo-gallery" accept="image/*" hidden><input type="file" id="photo-camera" accept="image/*" capture="environment" hidden>`);return;
+   await openDialog(photos,()=>`<h2>A little moment, shared.</h2><p>Photos are compressed on your device before they leave it.</p><div class="action-list"><button data-action="photo-gallery">Choose from gallery</button><button data-action="photo-camera">Take a photo</button></div><input type="file" id="photo-gallery" accept="image/*" hidden><input type="file" id="photo-camera" accept="image/*" capture="environment" hidden>`);return;
   }
   if(a==='photo-gallery'||a==='photo-camera'){$('#'+a)?.click();return}
   if(a==='send-photo'){
@@ -803,7 +805,7 @@ async function action(a, el) {
   }
   if (prefix === "reply" || prefix === "edit") {
     if(prefix==='reply'){beginReply(m);return}
-    S.page = "chat";S.editDraft=draft;
+    S.page = "chat";if(!S.edit)S.editDraft=draft;
     S.reply = prefix === "reply" ? m : null;
     S.edit = prefix === "edit" ? m : null;
     if (S.edit) draft = m.body;
@@ -874,14 +876,13 @@ document.addEventListener("submit", (e) => {
 });
 document.addEventListener("input", (e) => {
   if (e.target.id === "search-input") {
-    const q = e.target.value.trim().toLowerCase();
-    $("#search-results").innerHTML = q ? visibleMessages(S.messages, S.cutoff).filter((m) => !m.deleted && m.body.toLowerCase().includes(q)).slice(-20).map((m) => `<article class="note"><small>${date(m.created_at)} \xB7 ${time(m.created_at)}</small><p style="font:13px/1.8 'DM Sans',sans-serif">${linkify(m.body)}</p></article>`).join("") || "<p>No little moments found.</p>" : "";
+    $('#search-results').innerHTML=chatView.searchHTML(visibleMessages(S.messages,S.cutoff),e.target.value,pageContext());
   }
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {closeModal();$("#sidebar")?.classList.remove("open")}
   if (e.key === "Tab" && $(".modal,.photo-lightbox")) {
-    const els = [...$(".modal,.photo-lightbox").querySelectorAll("button,input,textarea,a")].filter((x) => !x.disabled);
+    const els = chatView.dialogFocusables($('.modal,.photo-lightbox'));
     if (e.shiftKey && document.activeElement === els[0]) {
       e.preventDefault();
       els.at(-1).focus();
@@ -893,7 +894,7 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener('visibilitychange',()=>{
  document.body.classList.toggle('app-hidden',document.hidden);if(!S.user||S.demo)return;
- if(document.hidden){flushStash();hiddenPause=setTimeout(()=>{if(document.hidden)stop()},30000)}
+ if(document.hidden){flushStash();hiddenPause=setTimeout(()=>{if(document.hidden)stop(true)},30000)}
  else{clearTimeout(hiddenPause);if(!channel)startRealtime();else refresh()}
 });
 window.addEventListener('online',()=>{if(S.user&&!S.demo){if(!channel)startRealtime();refresh()}updateStatus()});
@@ -901,7 +902,7 @@ window.addEventListener('offline',updateStatus);
 window.addEventListener('pagehide',flushStash);
 login();
 // The public login and sample don't download or initialize the messaging SDK.
-let hasSavedSession=false;try{hasSavedSession=!!(localStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')||sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token'))}catch{}
+let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
 if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{

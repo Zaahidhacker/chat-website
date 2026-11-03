@@ -1,4 +1,7 @@
 export {createPresence} from './live-presence.js';
+export {paths} from './icons.js';
+export {createSessionStorage} from './session-storage.js';
+export {searchHTML,dialogFocusables,prepareDialog} from './conversation-search.js';
 
 // Cached, signed-in motion polish keeps the cold login within its 25 KB budget.
 const interactionStyle=document.createElement('link');interactionStyle.rel='stylesheet';interactionStyle.href=INTERACTIONS_STYLE_URL;export const ready=new Promise((resolve,reject)=>{interactionStyle.onload=resolve;interactionStyle.onerror=()=>reject(Error('Could not load the chat design. Please try again.'))});document.head.append(interactionStyle);

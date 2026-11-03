@@ -19,6 +19,10 @@
     "test:replies": "node tests/replies-presence-browser.mjs",
     "test:design": "node tests/design-browser.mjs",
     "test:audio": "node tests/audio-browser.mjs",
+    "test:robustness": "node tests/robustness-browser.mjs",
+    "test:accessibility": "node tests/accessibility-browser.mjs",
+    "test:endurance": "node tests/endurance.mjs",
+    "test:idle": "node tests/idle-browser.mjs",
     "test:interactions": "node tests/interactions-browser.mjs",
     "test:anniversary": "node tests/anniversary-browser.mjs"
   },
@@ -33,6 +37,7 @@
     "motion": "14.6.0"
   },
   "devDependencies": {
+    "axe-core": "4.14.0",
     "esbuild": "0.25.10",
     "playwright": "1.62.1",
     "postcss": "8.5.32",
