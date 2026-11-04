@@ -483,7 +483,7 @@ function updateMessages(force){
     const t=document.createElement('template');t.innerHTML=item.html();node=t.content.firstElementChild;
     node.dataset.logKey=item.key;renderSignatures.set(node,item.signature);
     if(!existing.has(item.key)&&item.key==='message-'+S.messages.at(-1)?.id&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-     node.querySelector('.message-main')?.animate([{opacity:.6,transform:'translateY(5px)'},{opacity:1,transform:'none'}],{duration:140,easing:'ease-out'});
+     node.querySelector('.message-main')?.animate([{transform:'translateY(5px)'},{transform:'none'}],{duration:140,easing:'ease-out'});
     }
    }
    if(node===cursor)cursor=cursor.nextSibling;
