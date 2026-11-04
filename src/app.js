@@ -680,12 +680,16 @@ async function action(a, el) {
   if (a === "toggle-theme" || a.startsWith("theme-")) {
     setTheme(a === "toggle-theme" ? theme === "dark" ? "light" : "dark" : a.slice(6));
     if (S.user) {
+      const epoch=sessionEpoch;
       try {
         await changeSettings();
       } catch {
         toast("Appearance changed on this device; account sync failed.");
       }
+      if(epoch!==sessionEpoch||!S.user)return;
+      const log=$('#messages'),position=log&&{top:log.scrollTop,bottom:nearBottom()};
       render();
+      const restored=$('#messages');if(position&&restored)restored.scrollTop=position.bottom?restored.scrollHeight:position.top;
     } else login();
     return;
   }

@@ -42,5 +42,13 @@ try{
  await check('theme choices announce selection and preserve existing messages and saved items',async()=>{
   const ids=fixture.messages.map(m=>m.id),saved=[...fixture.favorites.get(users[0].id)||[]];await page.locator('.sidebar [data-action=page-settings]').click();await page.getByRole('button',{name:'Soft Love',exact:true}).click();await page.locator('[data-action=theme-light][aria-pressed=true]').waitFor();assert.equal(await page.getByRole('button',{name:'Soft Love',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('light')),true);await page.getByRole('button',{name:'Midnight Romance',exact:true}).click();await page.locator('[data-action=theme-dark][aria-pressed=true]').waitFor();assert.equal(await page.getByRole('button',{name:'Midnight Romance',exact:true}).getAttribute('aria-pressed'),'true');await page.locator('.sidebar [data-action=page-chat]').click();await page.locator('#message-input').waitFor();assert.deepEqual(fixture.messages.map(m=>m.id),ids);assert.deepEqual([...fixture.favorites.get(users[0].id)||[]],saved);assert.equal(await page.locator('.sidebar [data-action=page-chat]').getAttribute('aria-current'),'page');
  });
+ await check('changing appearance preserves both latest-message and earlier-reading positions with an unsent draft',async()=>{
+  await page.locator('#message-input').fill('A draft stays with my reading position.');
+  for(const bottom of [true,false]){
+   await page.locator('#messages').evaluate((el,bottom)=>el.scrollTop=bottom?el.scrollHeight:Math.round(el.scrollHeight/3),bottom);
+   const before=await page.locator('#messages').evaluate(el=>el.scrollTop),old=await page.locator('#messages').elementHandle();await page.getByRole('button',{name:'Change appearance',exact:true}).click();await page.waitForFunction(el=>!el.isConnected,old);
+   const after=await page.locator('#messages').evaluate(el=>({top:el.scrollTop,gap:el.scrollHeight-el.clientHeight-el.scrollTop}));if(bottom)assert(after.gap<3,'The latest message stays visible after a theme change');else assert(Math.abs(after.top-before)<3,'Earlier reading position stays put');assert.equal(await page.locator('#message-input').inputValue(),'A draft stays with my reading position.');
+  }
+ });
  assert.deepEqual(errors,[]);await writeFile('work/taste-ui-report.json',JSON.stringify({passed:true,results,errors},null,2));
 }finally{await browser.close();server.close()}
