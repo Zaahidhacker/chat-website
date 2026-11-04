@@ -127,6 +127,7 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
+ chatView?.observeComposer(null);chatView?.closeNavigation();
  chatView?.stopProject28();chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
@@ -388,7 +389,7 @@ function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))
 
 function render() {
  livePresence?.reconcile();
-  ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
+  chatView.observeComposer(null);ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
   $("#app").innerHTML=chatView.shellHTML({S,theme,logo,ib,icon,esc,chatHTML,pageViews,pageContext,secondaryPlaceholder});
   updateRelationship();document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(document.body.classList.contains('quiet-sky'))));
   updateStatus();locationAPI?.controls($("#location-controls"));
@@ -402,12 +403,11 @@ function render() {
     observePhotos();
     attachSwipeReply($('#messages'),id=>{const m=S.messages.find(m=>m.id===id);if(m&&!m.deleted)beginReply(m)});
     const ta = $("#message-input");
-    ta.value = draft;
+    ta.value = draft;chatView.observeComposer(ta);
     ta.addEventListener("input", () => {
       draft = ta.value;
       stash();
-      ta.style.height = "auto";
-      ta.style.height = Math.min(150, ta.scrollHeight) + "px";
+      chatView.fitComposer(ta);
       if (Date.now() - lastTyped > 3000 && channel && S.me.share_presence) {
         db.rpc("universe_typing").then(()=>{});
         lastTyped = Date.now();
@@ -502,7 +502,7 @@ function replyHTML() {
 function beginReply(m){
  if(S.edit)draft=S.editDraft||'';S.reply=m;S.edit=null;closeModal();
  if(S.page!=='chat'){S.page='chat';render()}
- $('#reply-container').innerHTML=replyHTML();$('#message-input').value=draft;
+ $('#reply-container').innerHTML=replyHTML();$('#message-input').value=draft;chatView.fitComposer($('#message-input'));
  $('#message-input').focus({preventScroll:true});
 }
 async function send() {
@@ -520,7 +520,7 @@ async function send() {
       if(epoch!==sessionEpoch)return;
       const m2 = S.messages.find((x) => x.id === mid);
       if(m2){m2.body=body;m2.edited_at=new Date().toISOString()}
-      if(S.edit===edit&&input.value.trim()===body){S.edit=null;draft=S.editDraft||'';S.editDraft=null;input.value=draft;input.style.height='auto';$('#reply-container').innerHTML='';stash()}
+      if(S.edit===edit&&input.value.trim()===body){S.edit=null;draft=S.editDraft||'';S.editDraft=null;input.value=draft;chatView.fitComposer(input);$('#reply-container').innerHTML='';stash()}
       updateMessages();
     } catch {
       if(epoch===sessionEpoch)toast("Couldn\u2019t save that edit. Please try again.");
@@ -609,6 +609,7 @@ async function changeSettings() {
 }
 function prepareDraft(text){draft=(draft?draft+'\n\n'+String(text):String(text)).slice(0,8000);S.page='chat';S.reply=S.edit=null;closeModal();render();stash();$('#message-input')?.focus({preventScroll:true});scrollBottom()}
 async function action(a, el) {
+  if(a!=='mobile-menu'&&a!=='ambient-mode'&&el.closest('.sidebar'))chatView?.closeNavigation();
  if(a.startsWith('space-'))a='page-'+a.slice(6);
  if(a==='ambient-mode'){const quiet=document.body.classList.toggle('quiet-sky');document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(quiet)));try{localStorage.setItem('universe-quiet-sky',String(quiet))}catch{}return}
  if(a==='wishing-star'){prepareDraft('A little wishing star for you ✨ Make a wish, my love.');return}
@@ -689,8 +690,7 @@ async function action(a, el) {
     return;
   }
   if (a === "mobile-menu") {
-    $("#sidebar").classList.toggle("open");
-    el.setAttribute('aria-expanded',String($('#sidebar').classList.contains('open')));
+    chatView.toggleNavigation();
     return;
   }
   if (a.startsWith("page-")) {
@@ -759,7 +759,7 @@ async function action(a, el) {
   }
   if (a === "cancel-reply") {
     if(S.edit)draft=S.editDraft||'';S.reply = S.edit = null;
-    $("#message-input").value = draft;
+    $("#message-input").value = draft;chatView.fitComposer($("#message-input"));
     $("#reply-container").innerHTML = "";stash();
     return;
   }
@@ -789,7 +789,7 @@ async function action(a, el) {
   if (a === "insert-emoji") {
     const ta=$('#message-input'),pos=ta?.selectionStart??draft.length,end=ta?.selectionEnd??pos;draft=draft.slice(0,pos)+el.dataset.emoji+draft.slice(end);stash();
     closeModal();
-    $("#message-input").value = draft;
+    $("#message-input").value = draft;chatView.fitComposer($("#message-input"));
     $("#message-input").focus();$("#message-input").setSelectionRange(pos+el.dataset.emoji.length,pos+el.dataset.emoji.length);
     return;
   }
@@ -880,7 +880,7 @@ document.addEventListener("click", (e) => {
     action(a, b).catch(() => toast("Something didn\u2019t go through. Please try again."));
   }
   if (e.target.classList.contains("modal-overlay")) closeModal();
-  if ($("#sidebar")?.classList.contains("open") && !e.target.closest(".sidebar") && !e.target.closest('[data-action="mobile-menu"]')) $("#sidebar").classList.remove("open");
+  if (!e.target.closest(".sidebar") && !e.target.closest('[data-action="mobile-menu"]')) chatView?.closeNavigation();
 });
 document.addEventListener("submit", (e) => {
   if (e.target.id === "login-form") signIn(e);
@@ -895,9 +895,9 @@ document.addEventListener("input", (e) => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {closeModal();$("#sidebar")?.classList.remove("open")}
-  if (e.key === "Tab" && $(".modal,.photo-lightbox")) {
-    const els = chatView.dialogFocusables($('.modal,.photo-lightbox'));
+  if (e.key === "Escape") {closeModal();chatView?.closeNavigation(true)}
+  if (e.key === "Tab" && $(".modal,.photo-lightbox,.sidebar.open")) {
+    const els = chatView.dialogFocusables($('.modal,.photo-lightbox')||$('.sidebar.open'));
     if (e.shiftKey && document.activeElement === els[0]) {
       e.preventDefault();
       els.at(-1).focus();

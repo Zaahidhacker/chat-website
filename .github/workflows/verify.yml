@@ -32,6 +32,7 @@ jobs:
       - run: npm run test:interactions
       - run: npm run test:audio
       - run: npm run test:design
+      - run: npm run test:taste
       - run: npm run test:replies
       - run: npm run test:latency
       - run: npm run test:foreground
