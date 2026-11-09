@@ -1,0 +1,22 @@
+.app-layout{translate:0 var(--app-y,0px)}
+.composer textarea{transition:height 120ms var(--motion-ease)}
+[data-viewport-moving] .composer textarea{transition:none}
+.app-layout button:not(:disabled):active,.modal button:not(:disabled):active{transform:none;scale:1}
+.app-layout .icon-btn:active>.icon,.composer .send:active>.icon,.modal-close:active>.icon{transform:scale(.9);transition:transform var(--motion-press) var(--motion-ease)}
+.app-layout :is(.icon-btn,.send)>.icon{transition:transform var(--motion-micro) var(--motion-ease)}
+.app-layout .nav:active>.icon,.mobile-spaces button:active>.icon{transform:translateY(1px);transition:transform var(--motion-press) var(--motion-ease)}
+.app-layout .message-main{transition:none}
+.swiping{user-select:none;-webkit-user-select:none}
+.message-actions-held>.message-actions{opacity:1}
+.modal.motion-managed,.modal-overlay:has(.motion-managed){animation:none;transition:none}
+.modal.motion-exiting{pointer-events:none}
+@starting-style{.reply-bar{opacity:.5;transform:translateY(5px)}.typing:not(:empty){opacity:0;transform:translateY(3px)}.photo-lightbox{opacity:0}.photo-preview{opacity:0}}
+.reply-bar,.typing,.photo-lightbox,.photo-preview{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
+.composer .send[data-has-text]>.icon{transition:transform var(--motion-micro) var(--motion-ease)}
+@media(prefers-reduced-motion:reduce){.app-layout *,.modal-overlay *,.photo-lightbox *{animation:none!important;transition:none!important}.app-layout{translate:none}.app-layout button:active>.icon{transform:none!important}}
+
+.motion-ghost{pointer-events:none!important;z-index:49!important;transition:none!important}.motion-ghost *{pointer-events:none!important}.motion-ghost .modal{transition:none!important}
+@media(max-width:700px){.sidebar,.sidebar.open{transition:transform var(--motion-nav) var(--motion-ease),visibility var(--motion-nav)}.sidebar.open{transition-property:transform}}
+
+#toast{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
+.switch:before,.switch:after{transition:transform var(--motion-panel) var(--motion-ease)}

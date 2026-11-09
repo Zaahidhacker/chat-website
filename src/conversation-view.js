@@ -1,3 +1,7 @@
+export {watchClose,unwatchClose} from './close-request.js';
+export {bindViewport,pinViewport,unbindViewport} from './chat-viewport.js';
+export {enterMessage,enterPanel,exitPanel,exitOverlay,clearMotion} from './motion-system.js';
+export {attachSwipeReply} from './swipe.js';
 export {fitComposer,observeComposer} from './composer-layout.js';
 export {toggleNavigation,closeNavigation} from './navigation.js';
 export {createPresence} from './live-presence.js';

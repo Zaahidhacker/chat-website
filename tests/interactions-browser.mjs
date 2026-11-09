@@ -12,7 +12,7 @@ try {
  await page.goto(origin);await page.locator('#email').fill(users[0].email);await page.locator('#password').fill('test-password-only');await page.getByRole('button',{name:'Enter our universe',exact:true}).click();await page.locator('#message-input').waitFor();
  await page.waitForFunction(()=>[...document.styleSheets].some(s=>s.href?.includes('interactions-')));
  const target=page.getByRole('button',{name:'Conversation options'});await target.click();await page.getByRole('dialog').waitFor();
- assert.equal(await page.locator('.modal').evaluate(el=>getComputedStyle(el).transitionDuration),'0.2s, 0.2s');
+ assert(await page.locator('#modal-root .modal').evaluate(el=>el.getAnimations().some(a=>a.effect.getTiming().duration===220)));
  await page.getByRole('button',{name:'Close',exact:true}).click();
  await page.locator('#message-input').fill('A draft stays safe');
  const before=await page.locator('#messages').evaluate(el=>({top:el.scrollTop,count:el.children.length}));
@@ -23,7 +23,7 @@ try {
  await page.emulateMedia({reducedMotion:'no-preference'});
  await page.locator('#message-input').click();const box=await target.boundingBox();
  await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.waitForTimeout(180);
- assert(Math.abs(Number(await target.evaluate(el=>getComputedStyle(el).scale))-.97)<.001);await page.mouse.up();await page.getByRole('dialog').waitFor();
+ assert.equal(await target.evaluate(el=>getComputedStyle(el).scale),'1');assert.notEqual(await target.locator('.icon').evaluate(el=>getComputedStyle(el).transform),'none');await page.mouse.up();await page.getByRole('dialog').waitFor();
  await page.keyboard.press('Escape');await page.waitForTimeout(200);
  assert.equal(await target.evaluate(el=>el.matches(':focus-visible')),true);
  assert.equal(await target.evaluate(el=>getComputedStyle(el).scale),'1');

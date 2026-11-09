@@ -4,7 +4,6 @@ import { visibleMessages, receiptLabel, mergeMessages, boundMessages, isConfirme
 import { createReceiptScheduler, debounce } from "./scheduling.js";
 import { explainError, isConnectionError, resilientFetch } from './connection.js';
 import { linkify } from './links.js';
-import { attachSwipeReply } from './swipe.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
 let db,clientReady,chatView,voiceAPI,livePresence;
@@ -80,17 +79,18 @@ function toast(t) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => $("#toast").classList.remove("visible"), 4e3);
 }
-let dialogOpener,photoSelection=0,dialogRequest=0;
+let swipeCleanup,dialogOpener,photoSelection=0,dialogRequest=0;
 async function openDialog(load,view){const request=++dialogRequest,result=await load();if(request===dialogRequest)modal(view(result))}
 function modal(html) {
-  dialogRequest++;
+  dialogRequest++;chatView?.watchClose('dialog',closeModal);
   if(!$("#modal-root").children.length)dialogOpener=document.activeElement;$("#app").inert=true;
   $("#modal-root").innerHTML = `<div class="modal-overlay"><section class="modal" role="dialog" aria-modal="true" aria-label="Conversation action">${ib("close", "Close", "close-modal", "modal-close")}${html}</section></div>`;
-  chatView?.prepareDialog($('.modal'));
+  chatView?.prepareDialog($('.modal'));$('.modal').classList.add('motion-managed');chatView?.enterPanel($('.modal'));
   const first = $("button,input,textarea", $(".modal"));
   first?.focus();
 }
-function closeModal() {
+function closeModal(animate=true) {
+ chatView?.unwatchClose('dialog');if(animate)chatView?.exitOverlay($('#modal-root').firstElementChild);
  dialogRequest++;
  voiceAPI?.dispose();
   photoSelection++;photoAPI?.cancelPreview();
@@ -127,12 +127,12 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
- chatView?.observeComposer(null);chatView?.closeNavigation();
+ swipeCleanup?.();swipeCleanup=null;chatView?.observeComposer(null);chatView?.unbindViewport();chatView?.closeNavigation();chatView?.clearMotion();
  chatView?.stopProject28();chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
  if(S.user&&!S.demo){try{sessionStorage.removeItem('universe-draft-'+S.user.id);sessionStorage.removeItem('universe-outbox-'+S.user.id)}catch{}}
  draft='';S.messages=[];S.keepsakes=[];S.reactions=[];S.favorites=new Set();S.hidden=new Set();S.reply=S.edit=null;S.user=null;syncCursor=0;
- document.title='Our Little Universe — Just us.';messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal();
+ document.title='Our Little Universe — Just us.';messageLookup.clear();reactionLookup.clear();replyContext.clear();resumeSession=null;closeModal(false);
 }
 function restoreOutbox() {
   try {
@@ -389,7 +389,7 @@ function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))
 
 function render() {
  livePresence?.reconcile();
-  chatView.observeComposer(null);ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
+  swipeCleanup?.();swipeCleanup=null;chatView.observeComposer(null);ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
   $("#app").innerHTML=chatView.shellHTML({S,theme,logo,ib,icon,esc,chatHTML,pageViews,pageContext,secondaryPlaceholder});
   updateRelationship();document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(document.body.classList.contains('quiet-sky'))));
   updateStatus();locationAPI?.controls($("#location-controls"));
@@ -398,10 +398,11 @@ function render() {
   if(S.page==='location')import('./location.js').then(async module=>{if(S.page==='location'&&S.user){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:S.demo});if(S.page==='location'&&S.user){module.controls($('#location-controls'));module.mount($('#location-root'),{user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}}).catch(()=>{if($('#location-root'))$('#location-root').textContent='Could not open locations. Return to chat and try again.'});
   if(S.page==='island')import('./island.js').then(module=>{if(S.page==='island'&&S.user){island=module;island.mount($('#island-root'),{db,user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}).catch(()=>{if($('#island-root'))$('#island-root').innerHTML='<p>Could not find our island. Return to chat and try again.</p>'});
   if(S.page==='garden')import('./garden.js').then(module=>{if(S.page==='garden'&&S.user){garden=module;garden.mount($('#garden-root'),{db,user:S.user,me:S.me,partner:S.partner,demo:S.demo})}}).catch(()=>{if($('#garden-root'))$('#garden-root').innerHTML='<p>Could not open the garden. Return to chat and try again.</p>'});
+  chatView.bindViewport();
   if (S.page === "chat") {
     primeLog();
     observePhotos();
-    attachSwipeReply($('#messages'),id=>{const m=S.messages.find(m=>m.id===id);if(m&&!m.deleted)beginReply(m)});
+    swipeCleanup=chatView.attachSwipeReply($('#messages'),id=>{const m=S.messages.find(m=>m.id===id);if(m&&!m.deleted)beginReply(m)},id=>{const button=$(`[data-message="${id}"] [data-action^=message-]`);if(button)action(button.dataset.action,button)});
     const ta = $("#message-input");
     ta.value = draft;chatView.observeComposer(ta);
     ta.addEventListener("input", () => {
@@ -461,6 +462,7 @@ function nearBottom() {
   return autoScrollPending||!el || el.scrollHeight - el.scrollTop - el.clientHeight < 100;
 }
 function scrollBottom() {
+  chatView?.pinViewport();
   autoScrollPending=true;
   requestAnimationFrame(() => {
     const el = $("#messages");
@@ -483,7 +485,7 @@ function updateMessages(force){
     const t=document.createElement('template');t.innerHTML=item.html();node=t.content.firstElementChild;
     node.dataset.logKey=item.key;renderSignatures.set(node,item.signature);
     if(!existing.has(item.key)&&item.key==='message-'+S.messages.at(-1)?.id&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-     node.querySelector('.message-main')?.animate([{transform:'translateY(5px)'},{transform:'none'}],{duration:140,easing:'ease-out'});
+     chatView.enterMessage(node.querySelector('.message-main'),node.classList.contains('own'));
     }
    }
    if(node===cursor)cursor=cursor.nextSibling;
@@ -533,7 +535,7 @@ async function send() {
   draft = "";
   flushStash();
   input.value = "";
-  input.style.height = "auto";
+  chatView.fitComposer(input);
   S.reply = null;
   $("#reply-container").innerHTML = "";
   updateMessages(true);
@@ -641,7 +643,7 @@ async function action(a, el) {
    try{await api.saveDraft(S.user.id,m,photo)}catch(error){el.disabled=false;throw error}api.takePreview();try{localStorage.setItem('universe-photo-pending-'+S.user.id,'1')}catch{}
    photoRecords.set(m.id,{id:m.id,width:photo.width,height:photo.height});api.localThumb(m.id,photo.thumb);S.messages.push(m);S.reply=null;$('#reply-container').innerHTML='';closeModal();flushStash();updateMessages(true);await transmit(m);return;
   }
-  if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();dialogOpener=document.activeElement;$('#app').inert=true;await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
+  if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();dialogOpener=document.activeElement;$('#app').inert=true;chatView.watchClose('dialog',closeModal);await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
   if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession);else await restoreSession()}finally{el.disabled=false}return}
   if(a==='notifications'){
    if(S.demo){toast('Sign in to enable private notifications.');return}
@@ -708,6 +710,7 @@ async function action(a, el) {
       S.keepsakes = data;await loadPhotos(data);
     }
     render();
+    if(S.page!=="chat")chatView.enterPanel($(".content-page"));
     if (S.page === "chat") {
       scrollBottom();
       receipt();
@@ -900,8 +903,8 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {closeModal();chatView?.closeNavigation(true)}
-  if (e.key === "Tab" && $(".modal,.photo-lightbox,.sidebar.open")) {
-    const els = chatView.dialogFocusables($('.modal,.photo-lightbox')||$('.sidebar.open'));
+  if (e.key === "Tab" && $("#modal-root .modal,#modal-root .photo-lightbox,.sidebar.open")) {
+    const els = chatView.dialogFocusables($('#modal-root .modal,#modal-root .photo-lightbox')||$('.sidebar.open'));
     if (e.shiftKey && document.activeElement === els[0]) {
       e.preventDefault();
       els.at(-1).focus();
@@ -930,7 +933,7 @@ if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message
 });
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>setNotificationAccount(S.user&&!S.demo?S.user.id:null));
 
-if(window.visualViewport){const resize=()=>{if(visualViewport.scale===1)document.documentElement.style.setProperty('--app-height',visualViewport.height+'px')};visualViewport.addEventListener('resize',resize,{passive:true});resize()}
+
 
 document.addEventListener('change',async event=>{
  if(!['photo-gallery','photo-camera'].includes(event.target.id)||!event.target.files?.[0])return;

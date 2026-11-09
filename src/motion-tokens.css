@@ -1,0 +1,6 @@
+:root{--motion-press:110ms;--motion-micro:140ms;--motion-panel:220ms;--motion-nav:260ms;--motion-ease:cubic-bezier(.22,1,.36,1)}
+.dream-login button{transition:scale var(--motion-press) var(--motion-ease),background-color var(--motion-micro) ease}
+.dream-login button:not(:disabled):active{transform:none;scale:.97}
+@starting-style{.dream-login [data-purpose=auth-card-container]{opacity:.6;transform:translateY(6px)}}
+.dream-login [data-purpose=auth-card-container]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+@media(prefers-reduced-motion:reduce){.dream-login [data-purpose=auth-card-container],.dream-login button{transition:none}.dream-login button:active{scale:1}}
