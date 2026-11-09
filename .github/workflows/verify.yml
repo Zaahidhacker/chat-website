@@ -20,6 +20,7 @@ jobs:
       - run: npm run build
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+      - run: npm run test:motion
       - run: npm run test:upgrades
       - run: npm run test:features
       - run: npm run test:island
@@ -33,7 +34,6 @@ jobs:
       - run: npm run test:audio
       - run: npm run test:design
       - run: npm run test:taste
-      - run: npm run test:motion
       - run: npm run test:replies
       - run: npm run test:latency
       - run: npm run test:foreground
