@@ -13,7 +13,7 @@
 @starting-style{.reply-bar{opacity:.5;transform:translateY(5px)}.typing:not(:empty){opacity:0;transform:translateY(3px)}.photo-lightbox{opacity:0}.photo-preview{opacity:0}}
 .reply-bar,.typing,.photo-lightbox,.photo-preview{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
 .composer .send[data-has-text]>.icon{transition:transform var(--motion-micro) var(--motion-ease)}
-@media(prefers-reduced-motion:reduce){.app-layout *,.modal-overlay *,.photo-lightbox *{animation:none!important;transition:none!important}.app-layout{translate:none}.app-layout button:active>.icon{transform:none!important}}
+@media(prefers-reduced-motion:reduce){.app-layout *,.modal-overlay *,.photo-lightbox *{animation:none!important;transition:none!important}.app-layout button:active>.icon{transform:none!important}}
 
 .motion-ghost{pointer-events:none!important;z-index:49!important;transition:none!important}.motion-ghost *{pointer-events:none!important}.motion-ghost .modal{transition:none!important}
 @media(max-width:700px){.sidebar,.sidebar.open{transition:transform var(--motion-nav) var(--motion-ease),visibility var(--motion-nav)}.sidebar.open{transition-property:transform}}
