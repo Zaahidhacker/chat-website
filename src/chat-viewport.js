@@ -1,4 +1,4 @@
-let log,observer,anchor,frame=0,settle=0,scheduled=false,restoring=false,ready=false,expectedTop=0;
+let log,observer,anchor,frame=0,settle=0,scheduled=false,restoring=false,ready=false,expectedTop=0,followUntil=0,lastHeight,lastOffset;
 const root=document.documentElement,vv=window.visualViewport;
 function snapshot(){
  if(document.hidden||!log?.isConnected||restoring)return;
@@ -11,7 +11,7 @@ function restore(){
  if(document.hidden||!ready||!log?.isConnected||!anchor)return;
  // A reader can scroll before the browser delivers its scroll event.
  // Honor that position instead of applying an older pin during composer growth.
- if(Math.abs(log.scrollTop-expectedTop)>1){restoring=false;snapshot()}restoring=true;
+ if(!root.hasAttribute('data-viewport-moving')&&Math.abs(log.scrollTop-expectedTop)>1){restoring=false;snapshot()}restoring=true;
  if(!anchor.node?.isConnected&&anchor.key)anchor.node=[...log.children].find(el=>el.dataset.logKey===anchor.key);
  if(anchor.bottom)log.scrollTop=log.scrollHeight;
  else if(anchor.node?.isConnected)log.scrollTop+=anchor.node.getBoundingClientRect().top-anchor.offset;
@@ -29,12 +29,15 @@ function update(){
  const h=`${Math.round(height*100)/100}px`,offset=`${Math.round(y*100)/100}px`;
  if(root.style.getPropertyValue('--app-height')!==h)root.style.setProperty('--app-height',h);
  if(root.style.getPropertyValue('--app-y')!==offset)root.style.setProperty('--app-y',offset);
- root.dataset.viewportMoving='';cancelAnimationFrame(settle);settle=requestAnimationFrame(()=>{settle=requestAnimationFrame(()=>delete root.dataset.viewportMoving)});
+ if(lastHeight!==h||lastOffset!==offset){root.dataset.viewportMoving='';cancelAnimationFrame(settle);settle=requestAnimationFrame(()=>{settle=requestAnimationFrame(()=>delete root.dataset.viewportMoving)});lastHeight=h;lastOffset=offset}
+ if(performance.now()<followUntil)schedule();
 }
 function schedule(){if(!frame)frame=requestAnimationFrame(update)}
 vv?.addEventListener('resize',schedule,{passive:true});vv?.addEventListener('scroll',schedule,{passive:true});
+function followFocus(event){if(event.target.matches?.('textarea,input,[contenteditable=true]')){followUntil=performance.now()+600;schedule()}}
+document.addEventListener('focusin',followFocus);document.addEventListener('focusout',followFocus);
 window.addEventListener('resize',schedule,{passive:true});window.addEventListener('pageshow',schedule);document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});schedule();
 
 export function pinViewport(){if(log){expectedTop=log.scrollTop;anchor={bottom:true,top:expectedTop}}}
 
-export function unbindViewport(){observer?.disconnect();log?.removeEventListener('scroll',scroll);log=null;anchor=null;ready=false;expectedTop=0}
+export function unbindViewport(){observer?.disconnect();log?.removeEventListener('scroll',scroll);log=null;anchor=null;ready=false;expectedTop=0;followUntil=0}

@@ -20,3 +20,19 @@
 
 #toast{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
 .switch:before,.switch:after{transition:transform var(--motion-panel) var(--motion-ease)}
+
+/* Interaction states use compositor motion; resting geometry stays unchanged. */
+@media(prefers-reduced-motion:no-preference){
+ .app-layout button:not(:disabled),.modal button:not(:disabled),.photo-lightbox button:not(:disabled){transition:translate var(--motion-press) var(--motion-ease),background-color var(--motion-micro) ease,color var(--motion-micro) ease}
+ .app-layout button:not(:disabled):active,.modal button:not(:disabled):active,.photo-lightbox button:not(:disabled):active{translate:0 1px}
+ .composer{transition:border-color var(--motion-micro) ease}
+ .composer:focus-within{border-color:var(--accent)}
+ .app-layout :is(input,textarea,select),.modal :is(input,textarea,select){transition:border-color var(--motion-micro) ease}
+ .composer textarea{transition:height 120ms var(--motion-ease)}
+ [data-viewport-moving] .composer textarea{transition:none}
+ .photo-lightbox button:not(:disabled):active{transform:none;scale:1}
+}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){
+ .app-layout :is(.icon-btn,.nav,.send):not(:disabled):hover>.icon{translate:0 -1px}
+ .app-layout :is(.icon-btn,.nav,.send)>.icon{transition:translate var(--motion-micro) var(--motion-ease),transform var(--motion-micro) var(--motion-ease)}
+}
