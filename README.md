@@ -76,7 +76,7 @@ The connected Vercel team uses **Hobby**, and the Supabase organization was veri
 
 ## Phone notifications
 
-In Settings, choose **Manage phone notifications** on each device. Permission is requested only after this action. Android Chromium supports Web Push; on iPhone/iPad, use iOS/iPadOS 16.4+ and add the site to the Home Screen before enabling notifications. Browser and operating-system support, permission settings, battery restrictions and network availability govern actual delivery. If notifications are already enabled, the control offers to turn them off.
+In Settings, choose **Manage phone notifications** on each device. Permission is requested only after this action. Android Chromium supports Web Push; on iPhone/iPad, use iOS/iPadOS 16.4+ and add the site to the Home Screen before enabling notifications. Browser and operating-system support, permission settings, battery restrictions and network availability govern actual delivery. If notifications are already enabled, the dialog repairs their registration and offers an explicit turn-off control.
 
 `supabase/009_private_push.sql` is an **additive upgrade** for the existing database. Do not rerun the initial migrations or reset an in-use database. New subscription records are private to their account, limited to five devices, and restricted to known HTTPS browser push providers. The database queues an asynchronous webhook only for a new message with a recipient subscription. No browser needs to remain open. The edge function looks up the authoritative sender and excludes their subscriptions. Edits, retries of an existing message UUID, and historic messages do not emit a new-message webhook.
 

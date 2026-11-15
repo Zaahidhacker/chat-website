@@ -648,8 +648,9 @@ async function action(a, el) {
   if(a==='notifications'){
    if(S.demo){toast('Sign in to enable private notifications.');return}
    el.disabled=true;
-   const permission='Notification'in window&&'PushManager'in window?Notification.requestPermission():null;
-   try{const {toggleNotifications}=await import('./notifications.js');toast(await toggleNotifications(db,S.user.id,permission));render()}
+   const epoch=sessionEpoch,userId=S.user.id;
+   const permission='Notification'in window&&Notification.permission==='default'?Notification.requestPermission():null;
+   try{const {manageNotifications}=await import('./notifications.js');if(epoch===sessionEpoch)await manageNotifications({db,userId,permissionRequest:permission,modal,valid:()=>epoch===sessionEpoch&&S.user?.id===userId})}
    catch(error){toast(explainError(error))}finally{el.disabled=false}return;
   }
   if (a === "close-modal") {
@@ -927,7 +928,9 @@ login();
 // The public login and sample don't download or initialize the messaging SDK.
 let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
 if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
-if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').then(reg=>{
+ const activate=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage('SKIP_WAITING')});reg.waiting?.postMessage('SKIP_WAITING')};activate();reg.addEventListener('updatefound',activate);
+}).catch(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{
  if(event.data?.type==='OPEN_CHAT'&&S.user&&!S.demo){S.page='chat';render();refresh();scrollBottom()}
 });

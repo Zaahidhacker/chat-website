@@ -21,6 +21,7 @@
     "test:foreground": "node tests/foreground-browser.mjs",
     "test:design": "node tests/design-browser.mjs",
     "test:audio": "node tests/audio-browser.mjs",
+    "test:notifications": "node tests/notifications-browser.mjs",
     "test:robustness": "node tests/robustness-browser.mjs",
     "test:accessibility": "node tests/accessibility-browser.mjs",
     "test:endurance": "node tests/endurance.mjs",
