@@ -74,6 +74,8 @@ The execution workspace blocks direct Supabase API and Vercel-origin browser net
 
 The connected Vercel team uses **Hobby**, and the Supabase organization was verified on **Free**. Free quotas, inactivity pausing, GitHub Actions allowances and provider policies still apply. No purchased domain, paid API, storage plan or billing integration is used.
 
+Voice calling, incoming ringtones, background invitations and remaining TURN relay setup are documented in [CALLS.md](CALLS.md).
+
 ## Phone notifications
 
 In Settings, choose **Manage phone notifications** on each device. Permission is requested only after this action. Android Chromium supports Web Push; on iPhone/iPad, use iOS/iPadOS 16.4+ and add the site to the Home Screen before enabling notifications. Browser and operating-system support, permission settings, battery restrictions and network availability govern actual delivery. If notifications are already enabled, the dialog repairs their registration and offers an explicit turn-off control.

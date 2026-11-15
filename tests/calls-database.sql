@@ -1,0 +1,54 @@
+-- Rollback-only verification using existing member identities, never their data.
+alter table public.universe_calls disable trigger universe_call_push;
+select set_config('request.jwt.claims',jsonb_build_object('sub',(select user_id from public.universe_members where slot=1),'role','authenticated')::text,true);
+set local role authenticated;
+do $$declare c public.universe_calls;blocked boolean:=false;begin
+ c:=public.universe_call_start('90000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000011','{"type":"offer","sdp":"test-only"}');
+ if c.caller<>auth.uid() or c.recipient=auth.uid() or c.state<>'calling' then raise exception 'Invalid initial call';end if;
+ if not exists(select 1 from public.universe_calls where id=c.id) then raise exception 'Caller cannot read call';end if;
+ if public.universe_call_ice()->'iceServers' is null then raise exception 'Missing ICE configuration';end if;
+ begin perform public.universe_call_start('90000000-0000-0000-0000-000000000002','90000000-0000-0000-0000-000000000011','{"type":"offer","sdp":"test-only"}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Concurrent call accepted';end if;
+ blocked:=false;
+ begin perform public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000011','accept','{"type":"answer","sdp":"test-only"}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Caller accepted own invitation';end if;
+ perform public.universe_call_signal(c.id,'90000000-0000-0000-0000-000000000011','{"candidate":"test-only","sdpMid":"0","sdpMLineIndex":0}');
+ blocked:=false;
+ begin perform public.universe_call_signal(c.id,'90000000-0000-0000-0000-000000000012','{"candidate":"test-only"}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Wrong tab sent ICE';end if;
+end$$;
+reset role;
+select set_config('request.jwt.claims',jsonb_build_object('sub',(select user_id from public.universe_members where slot=2),'role','authenticated')::text,true);
+set local role authenticated;
+do $$declare c public.universe_calls;blocked boolean:=false;begin
+ c:=public.universe_call_update('90000000-0000-0000-0000-000000000001','90000000-0000-0000-0000-000000000022','ring');
+ if c.ring_until<=now() then raise exception 'Recipient acknowledgement missing';end if;
+ c:=public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000023','away');
+ if c.ring_until is null then raise exception 'Other tab erased foreground acknowledgement';end if;
+ c:=public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000022','away');
+ if c.ring_until is not null then raise exception 'Background call still ringing';end if;
+ c:=public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000022','accept','{"type":"answer","sdp":"test-only"}');
+ if c.state<>'accepted' or c.recipient_device<>'90000000-0000-0000-0000-000000000022' then raise exception 'Answer ownership missing';end if;
+ blocked:=false;
+ begin perform public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000023','accept','{"type":"answer","sdp":"test-only"}');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Two devices answered';end if;
+ blocked:=false;
+ begin perform public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000023','end');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Other tab ended accepted call';end if;
+ c:=public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000022','heartbeat');
+ if c.state<>'accepted' then raise exception 'Heartbeat failed';end if;
+ c:=public.universe_call_update(c.id,'90000000-0000-0000-0000-000000000022','end');
+ if c.state<>'ended' or c.offer is not null or c.answer is not null then raise exception 'Ended call retained SDP';end if;
+end$$;
+reset role;
+select set_config('request.jwt.claims','{"sub":"99999999-9999-9999-9999-999999999999","role":"authenticated"}',true);
+set local role authenticated;
+do $$declare blocked boolean:=false;begin
+ if exists(select 1 from public.universe_calls) then raise exception 'Outsider read calls';end if;
+ begin perform public.universe_call_ice();exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Outsider read relay credentials';end if;
+ if has_table_privilege('authenticated','public.universe_calls','INSERT') or has_table_privilege('authenticated','public.universe_call_signals','INSERT') then raise exception 'Unvalidated call write allowed';end if;
+ if has_function_privilege('anon','public.universe_call_start(uuid,uuid,jsonb)','EXECUTE') or has_function_privilege('authenticated','public.universe_call_push_claim(uuid,text,text)','EXECUTE') then raise exception 'Privileged function exposed';end if;
+end$$;
+reset role;
+select 'Call role, state, device ownership, ICE and RLS checks passed' as result;

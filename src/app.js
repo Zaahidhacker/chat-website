@@ -6,7 +6,7 @@ import { explainError, isConnectionError, resilientFetch } from './connection.js
 import { linkify } from './links.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
-let db,clientReady,chatView,voiceAPI,livePresence;
+let db,clientReady,chatView,voiceAPI,livePresence,calls;
 let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
 function ensureClient(){
  if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(async([{createClient},views])=>{await views.ready;chatView=views;
@@ -127,6 +127,7 @@ function flushStash(){
  try{sessionStorage.setItem('universe-draft-'+S.user.id,draft);sessionStorage.setItem('universe-outbox-'+S.user.id,JSON.stringify(S.messages.filter(m=>m.pending||m.failed)))}catch{ /* Messaging remains available when storage is disabled or full. */ }
 }
 function clearPrivateState(){
+ calls?.close();calls=null;
  swipeCleanup?.();swipeCleanup=null;chatView?.observeComposer(null);chatView?.unbindViewport();chatView?.closeNavigation();chatView?.clearMotion();
  chatView?.stopProject28();chatView?.closeSecret();ritualGame?.unmount();locationAPI?.dispose();island?.dispose();garden?.dispose();photoAPI?.dispose(S.user?.id);photoRecords.clear();
  sessionEpoch++;refreshing=false;refreshQueued=false;clearTimeout(stashTimer);stop();
@@ -190,7 +191,7 @@ async function sample() {
 }
 async function enter(session){
  if(!session){login();return}
- resumeSession=session;
+ resumeSession=session;calls?.close();calls=null;
  const epoch=++sessionEpoch;refreshing=false;refreshQueued=false;stop();
  S.demo=false;S.user=session.user;S.loading=true;
  S.messages=[];S.keepsakes=[];S.reactions=[];S.older=false;S.newMessages=false;S.latestSeq=0;S.hidden=new Set();S.reply=S.edit=null;
@@ -207,7 +208,7 @@ async function enter(session){
    const api=await photos(),rows=await api.loadDrafts(S.user.id);if(epoch!==sessionEpoch)return;
    for(const row of rows){if(!S.messages.some(m=>m.id===row.message.id))S.messages.push({...row.message,pending:false,failed:true,transmitting:false});photoRecords.set(row.message.id,{id:row.message.id,width:row.photo.width,height:row.photo.height});api.localThumb(row.message.id,row.photo.thumb)}
   }
-  S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();chatView.project28(db,S,receipt);setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
+  S.loading=false;S.dataOnline=true;render();scrollBottom();calls=chatView.createCalls(db,{userId:S.user.id,partnerName:()=>S.partner?.name,toast});startRealtime();chatView.project28(db,S,receipt);setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
  }catch(error){
   if(epoch!==sessionEpoch)return;
   S.loading=false;
@@ -611,6 +612,7 @@ async function changeSettings() {
 }
 function prepareDraft(text){draft=(draft?draft+'\n\n'+String(text):String(text)).slice(0,8000);S.page='chat';S.reply=S.edit=null;closeModal();render();stash();$('#message-input')?.focus({preventScroll:true});scrollBottom()}
 async function action(a, el) {
+ if(a==='call-start'||a==='call-ringtone'){if(S.demo){toast('Sign in to use voice calls.');return}voiceAPI?.dispose();closeModal();if(a==='call-start')await calls?.start();else await calls?.sound();return}
   if(a!=='mobile-menu'&&a!=='ambient-mode'&&el.closest('.sidebar'))chatView?.closeNavigation();
  if(a.startsWith('space-'))a='page-'+a.slice(6);
  if(a==='ambient-mode'){const quiet=document.body.classList.toggle('quiet-sky');document.querySelectorAll('[data-action=ambient-mode]').forEach(b=>b.setAttribute('aria-pressed',String(quiet)));try{localStorage.setItem('universe-quiet-sky',String(quiet))}catch{}return}
@@ -673,11 +675,12 @@ async function action(a, el) {
     return;
   }
   if(a==='logout'){
+   const callEnd=calls?.close();calls=null;
    if(locationAPI&&!S.demo)await locationAPI.endSharing();
    setNotificationAccount(null);
    const wasDemo=S.demo,oldUser=S.user?.id;clearPrivateState();S.demo=false;login();
    if(!wasDemo&&oldUser)import('./notifications.js').then(({removeNotifications})=>removeNotifications(db,oldUser)).catch(()=>{});
-   if(!wasDemo&&db){try{await db.auth.signOut({scope:'local'})}finally{try{localStorage.removeItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}}}
+   if(!wasDemo&&db){try{await Promise.race([callEnd||Promise.resolve(),new Promise(resolve=>setTimeout(resolve,1500))]);await db.auth.signOut({scope:'local'})}finally{try{localStorage.removeItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}}}
    return;
   }
   if (a === "toggle-theme" || a.startsWith("theme-")) {
@@ -933,6 +936,7 @@ if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').then(r
 }).catch(()=>{});
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',event=>{
  if(event.data?.type==='OPEN_CHAT'&&S.user&&!S.demo){S.page='chat';render();refresh();scrollBottom()}
+ if(['OPEN_CALL','CALL_UPDATE'].includes(event.data?.type)&&S.user&&!S.demo)calls?.open();
 });
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>setNotificationAccount(S.user&&!S.demo?S.user.id:null));
 

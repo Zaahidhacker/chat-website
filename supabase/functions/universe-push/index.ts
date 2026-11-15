@@ -12,7 +12,31 @@ Deno.serve(async req=>{
   const provided=new TextEncoder().encode(req.headers.get('x-universe-webhook')||'');
   const expected=new TextEncoder().encode(config.webhookSecret);
   if(provided.length!==expected.length||!timingSafeEqual(provided,expected))return json({error:'Unauthorized'},401);
-  const {messageId}=await req.json();
+  const {messageId,callId}=await req.json();
+  if(callId!==undefined){
+   if(typeof callId!=='string'||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(callId))return json({error:'Invalid call'},400);
+   const {data:call,error:callError}=await service.from('universe_calls').select('id,recipient,state,expires_at').eq('id',callId).maybeSingle();
+   if(callError)throw callError;if(!call)return json({sent:0});
+   const kind=call.state==='calling'&&Date.parse(call.expires_at)>Date.now()?'invite':'end';
+   const {data:devices,error:devicesError}=await service.from('universe_push_subscriptions').select('endpoint,user_id,p256dh,auth').eq('user_id',call.recipient);
+   if(devicesError)throw devicesError;
+   const outcomes=await Promise.all((devices||[]).map(async sub=>{
+    const {data:claimed,error:claimError}=await service.rpc('universe_call_push_claim',{mid:call.id,ep:sub.endpoint,event_kind:kind});
+    if(claimError||!claimed)return false;
+    let ok=false;
+    try{
+     const ttl=kind==='invite'?Math.max(1,Math.min(60,Math.ceil((Date.parse(call.expires_at)-Date.now())/1000))):60;
+     await webpush.sendNotification({endpoint:sub.endpoint,keys:{p256dh:sub.p256dh,auth:sub.auth}},JSON.stringify({userId:sub.user_id,callId:call.id,kind,expiresAt:call.expires_at}),{
+      vapidDetails:{subject:'https://chat-website-brown.vercel.app',publicKey:config.publicKey,privateKey:config.privateKey},TTL:ttl,urgency:'high',timeout:8000,
+     });ok=true;
+    }catch(error){
+     if(error.statusCode===404||error.statusCode===410)await service.from('universe_push_subscriptions').delete().eq('endpoint',sub.endpoint);
+     console.warn('Call push provider rejected delivery',{status:error.statusCode||0});
+    }
+    await service.rpc('universe_call_push_finish',{mid:call.id,ep:sub.endpoint,event_kind:kind,ok});return ok;
+   }));
+   return json({sent:outcomes.filter(Boolean).length});
+  }
   if(typeof messageId!=='string'||!/^[0-9a-f-]{36}$/i.test(messageId))return json({error:'Invalid message'},400);
   // Look up authoritative sender. Never trust a recipient or message body in the webhook.
   const {data:message,error:messageError}=await service.from('universe_messages').select('id,sender,deleted').eq('id',messageId).maybeSingle();
