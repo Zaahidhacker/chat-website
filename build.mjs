@@ -10,7 +10,7 @@ const alluraBytes=await readFile('node_modules/@fontsource/allura/files/allura-l
 const alluraURL=`/assets/allura-${createHash('sha256').update(alluraBytes).digest('hex').slice(0,12)}.woff2`;await writeFile('dist'+alluraURL,alluraBytes);
 const featureDefines={};
 for(const name of ['photos','garden','island','location','pages','hearts','project28','anniversary','interactions']){
- const css=(await transform((name==='location'?await readFile('node_modules/leaflet/dist/leaflet.css','utf8'):'')+((name==='interactions'?await readFile('src/legacy-chat.css','utf8'):'')+(await readFile(`src/${name}.css`,'utf8'))+(name==='interactions'?(await readFile('src/dream-chat.css','utf8'))+(await readFile('src/native-motion.css','utf8')):'')).replace('/assets/allura-latin.woff2',alluraURL),{loader:'css',minify:true})).code;
+ const css=(await transform((name==='location'?await readFile('node_modules/leaflet/dist/leaflet.css','utf8'):'')+((name==='interactions'?await readFile('src/legacy-chat.css','utf8'):'')+(await readFile(`src/${name}.css`,'utf8'))+(name==='interactions'?(await readFile('src/dream-chat.css','utf8'))+(await readFile('src/native-motion.css','utf8'))+(await readFile('src/calls.css','utf8')):'')).replace('/assets/allura-latin.woff2',alluraURL),{loader:'css',minify:true})).code;
  const hash=createHash('sha256').update(css).digest('hex').slice(0,12),url=`/assets/${name}-${hash}.css`;
  await writeFile('dist'+url,css);featureDefines[name==='photos'?'PHOTO_STYLE_URL':name.toUpperCase()+'_STYLE_URL']=JSON.stringify(url);
 }
