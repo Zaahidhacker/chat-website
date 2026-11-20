@@ -2,6 +2,8 @@
 
 A private chat with photo sharing and a shared moon garden for Zaahid and Layaana. Built with vanilla JavaScript, a lazy-loaded Supabase client, Supabase Auth and Postgres row-level security. The production host is Vercel, with source in `Zaahidhacker/chat-website`.
 
+To recreate the site from this repository, follow [Recreate the website](RECREATE.md) for local development, a fresh Supabase backend, and deployment.
+
 ## Develop and verify
 
 ```sh

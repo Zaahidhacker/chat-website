@@ -3,6 +3,7 @@ work/
 .env*
 *.tgz
 .vercel/
+supabase/.temp/
 playwright-report/
 test-results/
 dist/
