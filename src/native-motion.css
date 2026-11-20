@@ -13,7 +13,7 @@
 @starting-style{.reply-bar{opacity:.5;transform:translateY(5px)}.typing:not(:empty){opacity:0;transform:translateY(3px)}.photo-lightbox{opacity:0}.photo-preview{opacity:0}}
 .reply-bar,.typing,.photo-lightbox,.photo-preview{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
 .composer .send[data-has-text]>.icon{transition:transform var(--motion-micro) var(--motion-ease)}
-@media(prefers-reduced-motion:reduce){.app-layout *,.modal-overlay *,.photo-lightbox *{animation:none!important;transition:none!important}.app-layout button:active>.icon{transform:none!important}}
+@media(prefers-reduced-motion:reduce){.app-layout *,.modal-overlay *,.photo-lightbox *,.session-transition *{animation:none!important;transition:none!important}.app-layout button:active>.icon{transform:none!important}}
 
 .motion-ghost{pointer-events:none!important;z-index:49!important;transition:none!important}.motion-ghost *{pointer-events:none!important}.motion-ghost .modal{transition:none!important}
 @media(max-width:700px){.sidebar,.sidebar.open{transition:transform var(--motion-nav) var(--motion-ease),visibility var(--motion-nav)}.sidebar.open{transition-property:transform}}
@@ -69,15 +69,44 @@
 [data-motion=lite] .app-layout :is(.icon-btn,.nav,.send):not(:disabled):hover>.icon{translate:0}
 @media(prefers-reduced-motion:reduce){.skeleton-line::after{animation:none}}
 
+/* A little universe of its own: layered glows and a tiled star field over
+   pure black (the taste suite pins background-color to rgb(0, 0, 0) and
+   requires a radial gradient). Decor uses <i>, never <span>, so the word
+   count and rising delays the suite asserts stay exact. */
 .session-transition{
  position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;
  box-sizing:border-box;margin:0;border:0;padding:24px;overflow:hidden;
- display:grid;place-items:center;text-align:center;color:#fff0f6;
- background:radial-gradient(ellipse min(52vw,290px) min(24vh,155px) at 50% 56%,#f6b9d23b,transparent 100%),#000;
+ display:grid;place-items:center;align-content:center;text-align:center;color:#fff0f6;
+ background-color:#000;
+ background-image:
+  radial-gradient(ellipse min(56vw,320px) min(26vh,170px) at 50% 54%,#f6b9d242,transparent 100%),
+  radial-gradient(ellipse at 50% 118%,#6d427d45,transparent 55%),
+  radial-gradient(ellipse at 50% -14%,#2c1f3a70,transparent 55%),
+  radial-gradient(1px 1px at 12% 22%,#fff9f2 80%,transparent),
+  radial-gradient(1px 1px at 84% 30%,#f2b8cd 80%,transparent),
+  radial-gradient(1px 1px at 68% 78%,#fff9f2 80%,transparent),
+  radial-gradient(1px 1px at 26% 70%,#e7c4a1 80%,transparent);
+ background-size:auto,auto,auto,137px 173px,223px 271px,311px 199px,181px 211px;
 }
 .session-transition::backdrop{background:transparent}
-.session-transition p{margin:0;text-wrap:balance;font:500 clamp(2rem,6.5vw,4rem)/1.12 var(--serif,Georgia,serif)}
+.session-decor{position:relative;width:120px;height:120px;margin:0 auto 26px}
+.session-halo{position:absolute;inset:-38px;border-radius:50%;background:radial-gradient(circle,#ffabc652,#b72e6220 42%,transparent 68%);animation:session-breathe 3.2s ease-in-out infinite}
+.session-ring{position:absolute;inset:-16px;border:1px solid #f2b8cd40;border-radius:50%;animation:session-spin 36s linear infinite}
+.session-ring::after{content:"";position:absolute;left:50%;top:-4px;width:7px;height:7px;margin-left:-3px;border-radius:50%;background:#ffd9e8;box-shadow:0 0 10px #f2b8cd}
+.session-heart{position:absolute;inset:0;display:grid;place-items:center;font:500 58px/1 var(--serif,Georgia,serif);font-style:normal;color:#ffb7cf;text-shadow:0 0 24px #f28aad66;animation:session-heart-in 700ms var(--motion-ease) both}
+.session-star{position:absolute;font-style:normal;font-size:13px;color:#ffe9f2;text-shadow:0 0 8px #f2b8cd;animation:session-twinkle 3.2s ease-in-out calc(var(--star-order)*.55s) infinite}
+.session-transition .session-eyebrow{margin:0 0 14px;font:600 11px/1.5 var(--sans);letter-spacing:.32em;text-transform:uppercase;color:#d9a7c2;animation:session-rise 500ms var(--motion-ease) 120ms both}
+.session-transition .session-words{margin:0;text-wrap:balance;font:500 clamp(2rem,6.5vw,4rem)/1.12 var(--serif,Georgia,serif)}
 .session-transition span{display:inline-block;animation:session-word-in 650ms var(--motion-ease) calc(110ms + var(--word-order)*85ms) both}
+.session-transition span.session-cursive{font-family:var(--hand,Caveat,cursive);font-size:1.18em;line-height:1;color:var(--accent,#ffb7cf);padding:0 .06em}
+.session-transition .session-sub{margin:18px auto 0;max-width:300px;font:400 13px/1.7 var(--sans);color:#c9a8bd;animation:session-rise 500ms var(--motion-ease) 560ms both}
 [data-motion=lite] .session-transition span{animation-name:session-word-fade;animation-duration:390ms;animation-delay:calc(60ms + var(--word-order)*55ms)}
+[data-motion=lite] .session-transition :is(.session-halo,.session-ring,.session-star,.session-heart){animation:none}
+[data-motion=lite] .session-transition :is(.session-eyebrow,.session-sub){animation-name:session-word-fade;animation-duration:390ms}
 @keyframes session-word-in{from{opacity:0;transform:translateY(7px)}}
 @keyframes session-word-fade{from{opacity:0}}
+@keyframes session-heart-in{from{opacity:0;transform:scale(.7)}60%{transform:scale(1.08)}}
+@keyframes session-breathe{50%{opacity:.65;transform:scale(1.06)}}
+@keyframes session-spin{to{transform:rotate(360deg)}}
+@keyframes session-twinkle{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes session-rise{from{opacity:0;transform:translateY(6px)}}

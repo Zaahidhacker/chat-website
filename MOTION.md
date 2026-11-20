@@ -126,6 +126,43 @@ messages, 6x CPU throttling) before and after:
   Long tasks across the audit fell from 15 to 10. The cold login stays at
   23.7 KiB gzip, under the 25 KB budget.
 
+## Session scenes, phase 4 (November 20, 2026)
+
+Zaahid added a personalized sign-out / welcome-back screen himself
+(commit `29e94c1`, synced in unchanged first): a full-screen `<dialog>`
+saying the person's name — "GoodBye! Come Back again.." on sign-out,
+"Welcome Back, Zaahid / Layaana" on return — built by the new
+`session-transition.js`, with word-stagger motion and gentle/reduced
+holds. It was honest but plain: black screen, one line of serif text.
+
+The redesign keeps his mechanism and every assertion his taste tests pin
+down, and makes the moment feel like the rest of the site:
+
+- **A little universe, not a black screen.** Pure black base (the suite
+  pins `background-color` to `rgb(0, 0, 0)`), layered with a rose glow
+  behind the words, a violet glow at the bottom, an indigo wash at the
+  top, and a tiled field of tiny stars.
+- **A glowing heart orb** with a breathing halo and a slowly orbiting
+  ring with a single bright satellite, plus five twinkling stars
+  scattered around the edges. Everything is transform/opacity only.
+- **A real composition:** a small-caps eyebrow ("A little hello" /
+  "Until next time"), the message in Cormorant serif, and the last word —
+  the person's name, or "again.." — in the site's Caveat handwriting in
+  pink, followed by a quiet subline ("Your little world kept everything
+  just as you left it." / "Your person will be right here when you
+  return."). The hold grew from 1.3 s to 1.5 s so the subline can be read.
+- **Constraints honored:** the dialog's `aria-label` and the word spans
+  (4 for the farewell, with strictly rising delays) are untouched; decor
+  uses `<i>`, never `<span>`, so the span count stays exact. Gentle mode
+  stills the orb, ring and stars and fades the words; reduced motion now
+  has an explicit `.session-transition *` kill-switch, so the subtree
+  reports zero animations (the mobile reduced-motion test asserts this).
+- **CSP note:** the production CSP is `script-src 'self'` with no inline
+  scripts, so the gentle-motion detection lives in `app.js` at module
+  load rather than as an inline `<script>` in `index.html`. Do not move
+  it back — the taste suite serves `index.html` under the real CSP and
+  asserts zero violations.
+
 ## Chrome guidance follow-up (November 13, 2026)
 
 Installed and verified `modern-web-guidance@googlechrome` 1.0.0 in the Codex environment, and applied its `motion` guide alongside the existing Motion skill. Research used Chrome's viewport and VirtualKeyboard documentation and its compositor-animation guidance. Browser geometry can arrive in a single step; the website cannot force the Android IME itself to slide or guarantee synchronized per-frame OS insets. Physical-device verification remains necessary.

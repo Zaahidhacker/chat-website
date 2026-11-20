@@ -103,6 +103,11 @@ try{
   assert.match(style.gradient,/radial-gradient/);
   assert.equal(style.wordDelays.length,4);
   assert(style.wordDelays.every((delay,index)=>index===0||delay>style.wordDelays[index-1]));
+  assert.equal(await scene.locator('.session-eyebrow').textContent(),'Until next time');
+  assert.equal(await scene.locator('.session-sub').textContent(),'Your person will be right here when you return.');
+  assert.equal(await scene.locator('.session-heart').count(),1);
+  assert.equal(await scene.locator('.session-star').count(),5);
+  assert.equal(await scene.locator('span.session-cursive').textContent(),'again..');
   await scene.waitFor({state:'detached'});
   await page.reload();await page.locator('#login-form').waitFor();
   assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
@@ -125,6 +130,8 @@ try{
   fixture.members[1].name='An edited display name';
   await signIn(users[1].email);
   await page.getByRole('dialog',{name:'Welcome Back, Layaana',exact:true}).waitFor();
+  assert.equal(await scene.locator('.session-eyebrow').textContent(),'A little hello');
+  assert.equal(await scene.locator('span.session-cursive').textContent(),'Layaana');
   await scene.waitFor({state:'detached'});
   await page.reload();await page.locator('#message-input').waitFor();
   assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
