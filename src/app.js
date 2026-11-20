@@ -6,13 +6,15 @@ import { explainError, isConnectionError, resilientFetch } from './connection.js
 import { linkify } from './links.js';
 const URL = "https://jczsnrzqocstbpsgwkdy.supabase.co";
 const KEY = "sb_publishable_bC-d7dzejgvGCetYD-JjOg_WKEZKJco";
-let db,clientReady,chatView,voiceAPI,livePresence;
-let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
+const AUTH_STORAGE_KEY='sb-jczsnrzqocstbpsgwkdy-auth-token';
+let db,clientReady,chatView,voiceAPI,livePresence,authStorage,signingOut=false;
+let rememberWorld=true;try{rememberWorld=!sessionStorage.getItem(AUTH_STORAGE_KEY)}catch{}
 function ensureClient(){
  if(!clientReady)clientReady=Promise.all([import('@supabase/supabase-js'),import('./conversation-view.js')]).then(async([{createClient},views])=>{await views.ready;chatView=views;
-  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{storage:views.createSessionStorage({remember:()=>rememberWorld}),persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
+  authStorage=views.createSessionStorage({remember:()=>rememberWorld});
+  db=createClient(URL,KEY,{global:{fetch:resilientFetch},auth:{storage:authStorage,persistSession:true,autoRefreshToken:true,detectSessionInUrl:true},realtime:{params:{eventsPerSecond:5}}});
   db.auth.onAuthStateChange((event,session)=>{
-   if(event==='SIGNED_OUT'&&!S.demo){clearPrivateState();login();setNotificationAccount(null)}
+   if(event==='SIGNED_OUT'&&!S.demo&&!signingOut){clearPrivateState();login();setNotificationAccount(null)}
    if(event==='TOKEN_REFRESHED'&&session){db.realtime.setAuth(session.access_token)}
   });
   return db;
@@ -75,6 +77,10 @@ function setTheme(t) {
   document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f8f5f3" : "#101011";
 }
 setTheme(theme);
+try{
+ const motion=localStorage.getItem('universe-motion');
+ if(motion==='lite'||(!motion&&((navigator.deviceMemory||Infinity)<=4||(navigator.hardwareConcurrency||Infinity)<=4)))document.documentElement.dataset.motion='lite';
+}catch{}
 try{document.body.classList.toggle('quiet-sky',localStorage.getItem('universe-quiet-sky')==='true')}catch{}
 function toast(t) {
   $("#toast").textContent = t;
@@ -177,7 +183,7 @@ async function signIn(e) {
       }
     } else result = await db.auth.signInWithPassword({ email, password });
     if (result.error) throw result.error;
-    await enter(result.data.session);
+    await enter(result.data.session,!inviteMode);
   } catch (err) {
     $("#login-error").textContent = explainError(err);
     btn.disabled = false;
@@ -194,9 +200,9 @@ async function sample() {
   render();
   scrollBottom();
 }
-async function enter(session){
+async function enter(session,welcome=false){
  if(!session){login();return}
- resumeSession=session;
+ resumeSession={session,welcome};
  const epoch=++sessionEpoch;refreshing=false;refreshQueued=false;stop();
  S.demo=false;S.user=session.user;S.loading=true;
  S.messages=[];S.keepsakes=[];S.reactions=[];S.older=false;S.newMessages=false;S.latestSeq=0;S.hidden=new Set();S.reply=S.edit=null;
@@ -207,6 +213,7 @@ async function enter(session){
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
   applyMetadata(state);S.unreadBoundary=S.me?.last_read||0;syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
   restoreOutbox();
+  if(welcome)chatView.welcomeBack(S.me);
   render(); // First paint only once the partner and the restored draft are known, so the header never flashes "Your person" and the composer never flashes empty; the skeleton covers message loading below.
   await loadMessages();if(epoch!==sessionEpoch)return;
   let pendingPhotos=false;try{pendingPhotos=!!localStorage.getItem('universe-photo-pending-'+S.user.id)}catch{}
@@ -655,7 +662,7 @@ async function action(a, el) {
    photoRecords.set(m.id,{id:m.id,width:photo.width,height:photo.height});api.localThumb(m.id,photo.thumb);S.messages.push(m);S.reply=null;$('#reply-container').innerHTML='';closeModal();flushStash();updateMessages(true);await transmit(m);return;
   }
   if(a.startsWith('photo-view-')){const id=a.slice(11);if(!photoRecords.has(id)){const m=S.messages.find(m=>m.id===id);if(m)await loadPhotos([m])}const p=photoRecords.get(id);if(p?.sent){const api=await photos();dialogOpener=document.activeElement;$('#app').inert=true;chatView.watchClose('dialog',closeModal);await api.show(p,$('#modal-root'))}else toast('Photo not ready yet. Check your connection and tap again.');return}
-  if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession);else await restoreSession()}finally{el.disabled=false}return}
+  if(a==='retry-session'){el.disabled=true;try{if(resumeSession)await enter(resumeSession.session,resumeSession.welcome);else await restoreSession()}finally{el.disabled=false}return}
   if(a==='notifications'){
    if(S.demo){toast('Sign in to enable private notifications.');return}
    el.disabled=true;
@@ -684,11 +691,25 @@ async function action(a, el) {
     return;
   }
   if(a==='logout'){
-   if(locationAPI&&!S.demo)await locationAPI.endSharing();
-   setNotificationAccount(null);
-   const wasDemo=S.demo,oldUser=S.user?.id;clearPrivateState();S.demo=false;login();
-   if(!wasDemo&&oldUser)import('./notifications.js').then(({removeNotifications})=>removeNotifications(db,oldUser)).catch(()=>{});
-   if(!wasDemo&&db){try{await db.auth.signOut({scope:'local'})}finally{try{localStorage.removeItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}}}
+   if(signingOut)return;
+   const wasDemo=S.demo,oldUser=S.user?.id??resumeSession?.session.user.id;
+   const finish=!wasDemo&&oldUser?chatView.farewell():null;
+   signingOut=true;
+   try{
+    if(locationAPI&&!wasDemo)await locationAPI.endSharing().catch(()=>{});
+    setNotificationAccount(null);
+    clearPrivateState();S.demo=false;login();
+    if(!wasDemo&&oldUser)import('./notifications.js').then(({removeNotifications})=>removeNotifications(db,oldUser)).catch(()=>{});
+    if(!wasDemo&&db){
+     try{await db.auth.signOut({scope:'local'})}finally{
+      authStorage.removeItem(AUTH_STORAGE_KEY);
+      if(oldUser)chatView.rememberSignOut(oldUser);
+     }
+    }
+   }finally{
+    await finish?.();
+    signingOut=false;
+   }
    return;
   }
   if (a === "toggle-theme" || a.startsWith("theme-")) {
@@ -945,7 +966,7 @@ window.addEventListener('pagehide',flushStash);
 window.addEventListener('pageshow',event=>{if(event.persisted&&S.user&&!S.demo){stop(true);startRealtime();refresh()}});
 login();
 // The public login and sample don't download or initialize the messaging SDK.
-let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem('sb-jczsnrzqocstbpsgwkdy-auth-token')}catch{}
+let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem(AUTH_STORAGE_KEY)}catch{}
 if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').then(reg=>{
  const activate=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage('SKIP_WAITING')});reg.waiting?.postMessage('SKIP_WAITING')};activate();reg.addEventListener('updatefound',activate);

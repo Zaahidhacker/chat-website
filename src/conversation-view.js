@@ -7,6 +7,7 @@ export {toggleNavigation,closeNavigation} from './navigation.js';
 export {createPresence} from './live-presence.js';
 export {paths} from './icons.js';
 export {createSessionStorage} from './session-storage.js';
+export {farewell,rememberSignOut,welcomeBack} from './session-transition.js';
 export {searchHTML,dialogFocusables,prepareDialog} from './conversation-search.js';
 
 // Cached, signed-in motion polish keeps the cold login within its 25 KB budget.

@@ -8,17 +8,42 @@ import {createFixture,users} from './transport-fixture.mjs';
 // Real UI with isolated synthetic accounts. Never reads or writes private production data.
 const root=path.resolve('dist');
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.woff2':'font/woff2','.svg':'image/svg+xml'};
-const server=http.createServer(async(req,res)=>{try{let route=new URL(req.url,'http://localhost').pathname;if(route==='/')route='/index.html';const file=path.resolve(root,'.'+route);if(!file.startsWith(root+path.sep))throw Error();res.setHeader('content-type',types[path.extname(file)]||'application/octet-stream');res.end(await readFile(file))}catch{res.writeHead(404).end()}});
+const deployment=JSON.parse(await readFile('vercel.json','utf8'));
+const csp=deployment.headers.flatMap(rule=>rule.headers).find(header=>header.key==='Content-Security-Policy');
+const server=http.createServer(async(req,res)=>{try{let route=new URL(req.url,'http://localhost').pathname;if(route==='/')route='/index.html';const file=path.resolve(root,'.'+route);if(!file.startsWith(root+path.sep))throw Error();res.setHeader('content-type',types[path.extname(file)]||'application/octet-stream');if(route==='/index.html')res.setHeader(csp.key,csp.value);res.end(await readFile(file))}catch{res.writeHead(404).end()}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const origin='http://127.0.0.1:'+server.address().port;
 const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||(existsSync('/usr/bin/chromium')?'/usr/bin/chromium':undefined),args:['--no-sandbox']});
 const context=await browser.newContext({viewport:{width:320,height:740},serviceWorkers:'block'});
 const fixture=createFixture(30),results=[],errors=[];
 await fixture.install(context);
+await context.addInitScript(()=>{
+ localStorage.setItem('universe-motion',localStorage.getItem('universe-motion')||'lite');
+ window.sessionScenes=[];
+ window.cspViolations=[];
+ document.addEventListener('securitypolicyviolation',event=>window.cspViolations.push(event.violatedDirective));
+ new MutationObserver(records=>{
+  for(const record of records)for(const node of record.addedNodes){
+   if(node instanceof Element && node.matches('.session-transition'))window.sessionScenes.push(node.getAttribute('aria-label'));
+  }
+ }).observe(document,{childList:true,subtree:true});
+});
 const page=await context.newPage();page.on('pageerror',error=>errors.push(error.message));
 async function check(name,fn){await fn();results.push(name);console.log('PASS '+name)}
+async function signIn(email){
+ await page.locator('#email').fill(email);
+ await page.locator('#password').fill('test-password-only');
+ await page.getByRole('button',{name:'Enter our universe',exact:true}).click();
+}
+const scene=page.locator('.session-transition');
+const goodbye='GoodBye! Come Back again..';
 try{
- await page.goto(origin);await page.locator('#email').fill(users[0].email);await page.locator('#password').fill('test-password-only');await page.getByRole('button',{name:'Enter our universe',exact:true}).click();await page.locator('#message-input').waitFor();
+ await page.goto(origin);await signIn(users[0].email);await page.locator('#message-input').waitFor();
+ await check('first sign-in skips the session scene and gentle mode loads under the production CSP',async()=>{
+  assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
+  assert.deepEqual(await page.evaluate(()=>window.cspViolations),[]);
+  assert.equal(await page.locator('html').getAttribute('data-motion'),'lite');
+ });
  await check('narrow-phone emoji stays available through options and inserts into an unsent draft',async()=>{
   const count=fixture.messages.length;await page.locator('#message-input').fill('A thought ');await page.getByRole('button',{name:'Conversation options',exact:true}).click();await page.getByRole('button',{name:'Choose an emoji',exact:true}).click();await page.getByRole('button',{name:'❤️',exact:true}).click();assert.equal(await page.locator('#message-input').inputValue(),'A thought ❤️');assert.equal(fixture.messages.length,count);
  });
@@ -61,6 +86,64 @@ try{
    const before=await page.locator('#messages').evaluate(el=>el.scrollTop),old=await page.locator('#messages').elementHandle();await page.getByRole('button',{name:'Change appearance',exact:true}).click();await page.waitForFunction(el=>!el.isConnected,old);
    const after=await page.locator('#messages').evaluate(el=>({top:el.scrollTop,gap:el.scrollHeight-el.clientHeight-el.scrollTop}));if(bottom)assert(after.gap<3,'The latest message stays visible after a theme change');else assert(Math.abs(after.top-before)<3,'Earlier reading position stays put');assert.equal(await page.locator('#message-input').inputValue(),'A draft stays with my reading position.');
   }
+ });
+ await check('desktop logout fades in the exact farewell and a signed-out refresh does not replay it',async()=>{
+  await page.evaluate(()=>{
+   document.documentElement.removeAttribute('data-motion');
+   localStorage.setItem('universe-motion','full');
+  });
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+  await page.getByRole('dialog',{name:goodbye,exact:true}).waitFor();
+  const style=await scene.evaluate(el=>({
+   background:getComputedStyle(el).backgroundColor,
+   gradient:getComputedStyle(el).backgroundImage,
+   wordDelays:[...el.querySelectorAll('span')].map(word=>parseFloat(getComputedStyle(word).animationDelay))
+  }));
+  assert.equal(style.background,'rgb(0, 0, 0)');
+  assert.match(style.gradient,/radial-gradient/);
+  assert.equal(style.wordDelays.length,4);
+  assert(style.wordDelays.every((delay,index)=>index===0||delay>style.wordDelays[index-1]));
+  await scene.waitFor({state:'detached'});
+  await page.reload();await page.locator('#login-form').waitFor();
+  assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
+ });
+ await check('a failed login and another member’s first login leave Zaahid’s welcome pending',async()=>{
+  await signIn('unknown@test.invalid');
+  await page.waitForFunction(()=>document.querySelector('#login-error').textContent.includes('didn’t open the door'));
+  await page.setViewportSize({width:320,height:740});
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await signIn(users[1].email);
+  await page.locator('#message-input').waitFor();
+  assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
+ });
+ await check('mobile logout and return show Layaana’s exact name with reduced motion',async()=>{
+  await page.getByRole('button',{name:'Open navigation',exact:true}).click();
+  await page.getByRole('button',{name:'Sign out',exact:true}).click();
+  await page.getByRole('dialog',{name:goodbye,exact:true}).waitFor();
+  assert.equal(await scene.evaluate(el=>el.getAnimations({subtree:true}).length),0);
+  await scene.waitFor({state:'detached'});
+  fixture.members[1].name='An edited display name';
+  await signIn(users[1].email);
+  await page.getByRole('dialog',{name:'Welcome Back, Layaana',exact:true}).waitFor();
+  await scene.waitFor({state:'detached'});
+  await page.reload();await page.locator('#message-input').waitFor();
+  assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
+ });
+ await check('another tab’s sign-out stays silent and Zaahid’s return appears once',async()=>{
+  const other=await context.newPage();
+  try{
+   await other.setViewportSize({width:1440,height:900});
+   await other.goto(origin);await other.locator('#message-input').waitFor();
+   await other.getByRole('button',{name:'Sign out',exact:true}).click();
+   await page.locator('#login-form').waitFor();
+   assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
+   await other.locator('.session-transition').waitFor({state:'detached'});
+  }finally{await other.close()}
+  await signIn(users[0].email);
+  await page.getByRole('dialog',{name:'Welcome Back, Zaahid',exact:true}).waitFor();
+  await scene.waitFor({state:'detached'});
+  await page.reload();await page.locator('#message-input').waitFor();
+  assert.deepEqual(await page.evaluate(()=>window.sessionScenes),[]);
  });
  assert.deepEqual(errors,[]);await writeFile('work/taste-ui-report.json',JSON.stringify({passed:true,results,errors},null,2));
 }finally{await browser.close();server.close()}
