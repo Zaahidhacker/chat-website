@@ -21,7 +21,56 @@ try{
  });
  const cdp=await phone.newCDPSession(layaana);await cdp.send('Emulation.setCPUThrottlingRate',{rate:6});
  await check('two isolated sessions restore the correct partner and initial history',async()=>{await Promise.all([login(zaahid,users[0]),login(layaana,users[1])]);assert.equal(await zaahid.locator('#partner-name').textContent(),'Layaana');assert.equal(await layaana.locator('#partner-name').textContent(),'Zaahid');await until(()=>fixture.members.every(m=>m.last_read>=350))});
- await check('Zaahid sends → Layaana receives exactly one message',async()=>{const at=performance.now();await send(zaahid,'Zaahid → Layaana: hello ♡');await layaana.getByText('Zaahid → Layaana: hello ♡',{exact:true}).waitFor();latencies.push({direction:'desktop-to-phone',fixtureRoundTripMs:Math.round(performance.now()-at)});assert.equal(await layaana.getByText('Zaahid → Layaana: hello ♡',{exact:true}).count(),1)});
+ await check('a new message bounces on the live timeline, stays painted, and keeps its bubble through acknowledgement',async()=>{
+  const message='Zaahid → Layaana: hello ♡';
+  for(const page of [zaahid,layaana])await page.evaluate(()=>{
+   localStorage.setItem('universe-motion','full');
+   document.documentElement.removeAttribute('data-motion');
+   const animate=Element.prototype.animate;
+   window.messageEntrances=[];
+   window.restoreMessageAnimation=()=>{Element.prototype.animate=animate};
+   Element.prototype.animate=function(frames,options){
+    const animation=animate.call(this,frames,options);
+    if(this.matches('.message-main'))window.messageEntrances.push({
+     text:this.querySelector('.bubble').textContent,
+     connected:this.isConnected,
+     liveTimeline:animation.timeline===document.timeline,
+     transforms:animation.effect.getKeyframes().map(frame=>frame.transform)
+    });
+    return animation;
+   };
+  });
+  let release;
+  const hold=new Promise(resolve=>{release=resolve});
+  const sendRoute='**/rest/v1/rpc/universe_send';
+  await zaahid.route(sendRoute,async route=>{await hold;await route.fallback()});
+  const response=zaahid.waitForResponse(sendRoute).catch(()=>{});
+  try{
+   const at=performance.now();
+   await send(zaahid,message);
+   const pending=zaahid.locator('.message.pending').filter({hasText:message});
+   const bubble=await pending.locator('.bubble').elementHandle();
+   assert(await bubble.evaluate(el=>Number(getComputedStyle(el.parentElement).opacity)>0),'Optimistic text must be painted during its bounce');
+   release();
+   const received=layaana.getByText(message,{exact:true});
+   await received.waitFor();
+   latencies.push({direction:'desktop-to-phone',fixtureRoundTripMs:Math.round(performance.now()-at)});
+   await pending.waitFor({state:'detached'});
+   assert(await bubble.evaluate(el=>el.isConnected),'Delivery must retain the animated bubble');
+   assert.equal(await received.count(),1);
+   for(const page of [zaahid,layaana]){
+    const entries=await page.evaluate(text=>window.messageEntrances.filter(entry=>entry.text===text),message);
+    assert.equal(entries.length,1);
+    assert.equal(entries[0].connected,true);
+    assert.equal(entries[0].liveTimeline,true);
+    assert(entries[0].transforms.some(transform=>transform.includes('translateY(-3px)')),'The entrance must overshoot before settling');
+    await page.waitForFunction(text=>[...document.querySelectorAll('.bubble')].some(el=>el.textContent===text&&getComputedStyle(el.parentElement).opacity==='1'&&!el.parentElement.getAnimations().length),message);
+   }
+  }finally{
+   release();await response;await zaahid.unroute(sendRoute);
+   for(const page of [zaahid,layaana])await page.evaluate(()=>window.restoreMessageAnimation());
+  }
+ });
  const first=fixture.messages.find(m=>m.body==='Zaahid → Layaana: hello ♡');
  await check('Layaana sends → Zaahid receives and read receipts update',async()=>{const at=performance.now();await send(layaana,'Layaana → Zaahid: right here ✨');await zaahid.getByText('Layaana → Zaahid: right here ✨',{exact:true}).waitFor();latencies.push({direction:'phone-to-desktop',fixtureRoundTripMs:Math.round(performance.now()-at)});await until(()=>fixture.members.every(m=>m.last_read>=352));await zaahid.locator(`[data-receipt="${first.id}"][data-status="Read"]`).waitFor()});
  await check('saving and editing remain synchronized',async()=>{let article=zaahid.locator(`[data-message="${first.id}"]`);await article.getByRole('button',{name:'Message actions'}).click();await zaahid.getByRole('dialog').getByRole('button',{name:/Save to keepsakes/}).click();await article.getByRole('button',{name:'Message actions'}).click();await zaahid.getByRole('button',{name:'Edit my message',exact:true}).click();await zaahid.locator('#message-input').fill('A little hello, edited with love');await zaahid.getByRole('button',{name:'Send message',exact:true}).click();await layaana.getByText('A little hello, edited with love',{exact:true}).waitFor()});

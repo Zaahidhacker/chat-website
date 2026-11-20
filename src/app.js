@@ -393,9 +393,10 @@ function updateReceipts(){
  const messages=new Map(S.messages.map(m=>[m.id,m]));
  for(const el of document.querySelectorAll('[data-receipt]')){
   const m=messages.get(el.dataset.receipt);if(!m)continue;
-  const stamp=el.closest('[data-message]')?.querySelector('.message-time'),key=m.created_at+'|'+(m.edited_at||'')+'|'+!!m.deleted;
+  const row=el.closest('[data-message]'),stamp=row?.querySelector('.message-time'),key=m.created_at+'|'+(m.edited_at||'')+'|'+!!m.deleted;
   if(stamp&&receiptTimes.get(stamp)!==key){const label=time(m.created_at)+(m.edited_at&&!m.deleted?' · edited':'');if(stamp.textContent!==label)stamp.textContent=label;receiptTimes.set(stamp,key)}
   const status=receiptLabel(m,S.partner);if(el.dataset.status===status)continue;
+  row?.classList.toggle('pending',!!m.pending);row?.classList.toggle('failed',!!m.failed);
   el.dataset.status=status;el.innerHTML=receiptHTML(m);
  }
 }
@@ -448,7 +449,7 @@ function chatHTML() {
 }
 function messageSignature(m){
  const reply=messageLookup.get(m.reply_to);
- return JSON.stringify([m.body,!!m.deleted,m.edited_at,(m.photoPending||photoRecords.has(m.id))?m.pending:null,!!m.pending,!!m.failed,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),reactionLookup.get(m.id)||[]]);
+ return JSON.stringify([m.body,!!m.deleted,m.edited_at,(m.photoPending||photoRecords.has(m.id))?m.pending:null,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),reactionLookup.get(m.id)||[]]);
 }
 function logItems(){
  const all=visibleMessages(S.messages,S.cutoff),ms=S.older?all.slice(0,WINDOW_SIZE):all.slice(-WINDOW_SIZE);
@@ -498,15 +499,15 @@ function updateMessages(force){
   let cursor=el.firstChild,cascade=0;
   for(const item of logItems()){
    let node=existing.get(item.key);
+   const animate=!node&&near&&!S.older&&latestIds.has(item.key);
    if(!node||renderSignatures.get(node)!==item.signature){
     const t=document.createElement('template');t.innerHTML=item.html();node=t.content.firstElementChild;
     node.dataset.logKey=item.key;renderSignatures.set(node,item.signature);
-    if(!existing.has(item.key)&&latestIds.has(item.key)&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-     chatView.enterMessage(node.querySelector('.message-main'),node.classList.contains('own'),cascade++*30);
-    }
    }
    if(node===cursor)cursor=cursor.nextSibling;
    else el.insertBefore(node,cursor);
+   // A template node has an inactive animation timeline until it joins the page.
+   if(animate)chatView.enterMessage(node.querySelector('.message-main'),cascade++*30);
   }
   while(cursor){const next=cursor.nextSibling;cursor.remove();cursor=next}
   if(near&&!S.older)scrollBottom();else el.scrollTop=top;
