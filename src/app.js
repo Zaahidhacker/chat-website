@@ -37,7 +37,8 @@ let replyContext=new Map(), resumeSession=null;
 let ritualGame,pageViews,photoAPI,garden,island,locationAPI,photoRecords=new Map();
 function pageContext(){return {S,theme,esc,icon,date,time,photoHTML,mergeMessages,linkify}}
 async function secondaryPages(){return pageViews??=await import('./pages.js').then(async v=>{await v.ready;return v})}
-const secondaryPlaceholder=()=>'<section class="content-page"><div class="page-skeleton" role="status">Opening your little corner…</div></section>';
+const secondaryPlaceholder=()=>'<section class="content-page"><div class="page-skeleton" role="status"><div class="skeleton-line" style="width:55%"></div><div class="skeleton-line" style="width:85%"></div><div class="skeleton-line" style="width:70%"></div><span>Opening your little corner…</span></div></section>';
+function hideBoot(){const boot=document.getElementById('boot');if(!boot)return;boot.classList.add('leaving');setTimeout(()=>boot.remove(),220)}
 async function photos(){photoAPI=await import('./photos.js');photoAPI.configure(db,S.user?.id);return photoAPI}
 async function loadPhotos(messages,epoch=sessionEpoch){
  messages=messages.filter(m=>photoRecords.has(m.id)||m.photoPending||m.body?.startsWith('📷 '));if(!messages.length||S.demo)return;
@@ -54,7 +55,9 @@ function photoHTML(m){
 }
 function setNotificationAccount(userId){navigator.serviceWorker?.ready.then(r=>r.active?.postMessage({type:'ACCOUNT',userId})).catch(()=>{})}
 function connectionScreen(error){
+ hideBoot();
  $('#app').innerHTML=`<main class="reconnect"><div class="brand">${logo()}<strong>Our Little Universe</strong></div><h1>A moment to reconnect.</h1><p role="status">${esc(explainError(error))}</p><button class="primary" data-action="retry-session">Try again ${icon('arrow')}</button><button class="text-btn" data-action="logout">Sign out of this device</button></main>`;
+ chatView?.enterPanel($('.reconnect'));
 }
 async function restoreSession(){
  try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
@@ -99,6 +102,7 @@ function closeModal(animate=true) {
 function time(t){return clockFormat.format(new Date(t))}
 function date(t){const d=new Date(t);return d.toDateString()===new Date().toDateString()?'Today':dayFormat.format(d)}
 function login() {
+  hideBoot();
   stop();
   S.user = null;
   $("#app").replaceChildren($("#login-template").content.cloneNode(true));
@@ -154,6 +158,7 @@ async function signIn(e) {
   e.preventDefault();
   let btn = $("button[type=submit]", e.target);
   btn.disabled = true;
+  btn.setAttribute("aria-label", "Entering our universe");
   btn.innerHTML = '<span class="spinner"></span>';
   $("#login-error").textContent = "";
   try {
@@ -176,6 +181,7 @@ async function signIn(e) {
   } catch (err) {
     $("#login-error").textContent = explainError(err);
     btn.disabled = false;
+    btn.removeAttribute("aria-label");
     btn.innerHTML = `${inviteMode ? "Create my account" : "Enter our universe"} ${icon("arrow")}`;
   }
 }
@@ -200,8 +206,9 @@ async function enter(session){
   if(error)throw error;
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
   applyMetadata(state);S.unreadBoundary=S.me?.last_read||0;syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
-  await loadMessages();if(epoch!==sessionEpoch)return;
   restoreOutbox();
+  render(); // First paint only once the partner and the restored draft are known, so the header never flashes "Your person" and the composer never flashes empty; the skeleton covers message loading below.
+  await loadMessages();if(epoch!==sessionEpoch)return;
   let pendingPhotos=false;try{pendingPhotos=!!localStorage.getItem('universe-photo-pending-'+S.user.id)}catch{}
   if(pendingPhotos||S.messages.some(m=>m.photoPending)){
    const api=await photos(),rows=await api.loadDrafts(S.user.id);if(epoch!==sessionEpoch)return;
@@ -388,6 +395,7 @@ function updateReceipts(){
 function receiptHTML(m){return chatView.receiptHTML(m,receiptLabel(m,S.partner))}
 
 function render() {
+ hideBoot();
  livePresence?.reconcile();
   swipeCleanup?.();swipeCleanup=null;chatView.observeComposer(null);ritualGame?.unmount();locationAPI?.unmount();island?.unmount();garden?.unmount();
   $("#app").innerHTML=chatView.shellHTML({S,theme,logo,ib,icon,esc,chatHTML,pageViews,pageContext,secondaryPlaceholder});
@@ -433,7 +441,7 @@ function chatHTML() {
 }
 function messageSignature(m){
  const reply=messageLookup.get(m.reply_to);
- return JSON.stringify([m.body,!!m.deleted,m.edited_at,(m.photoPending||photoRecords.has(m.id))?m.pending:null,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),reactionLookup.get(m.id)||[]]);
+ return JSON.stringify([m.body,!!m.deleted,m.edited_at,(m.photoPending||photoRecords.has(m.id))?m.pending:null,!!m.pending,!!m.failed,m.reply_to,reply?.body,reply?.deleted,photoRecords.get(m.id),S.favorites.has(m.id),reactionLookup.get(m.id)||[]]);
 }
 function logItems(){
  const all=visibleMessages(S.messages,S.cutoff),ms=S.older?all.slice(0,WINDOW_SIZE):all.slice(-WINDOW_SIZE);
@@ -441,6 +449,7 @@ function logItems(){
  for(const r of S.reactions){const list=reactionLookup.get(r.message_id)||[];list.push(r);reactionLookup.set(r.message_id,list)}
  const items=[];
  const add=(key,html)=>items.push({key,signature:html,html:()=>html});
+ if(S.loading){add('skeleton-1','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:72%"></div><div class="skeleton-line" style="width:48%"></div></div>');add('skeleton-2','<div class="chat-skeleton own" aria-hidden="true"><div class="skeleton-line" style="width:64%"></div><div class="skeleton-line" style="width:38%"></div></div>');add('skeleton-3','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:58%"></div></div>');add('skeleton-status','<div class="page-skeleton" role="status"><span>Opening your conversation…</span></div>');return items}
  if(!ms.length){add('empty-'+S.cutoff,`<div class="welcome-moment" style="margin-top:70px"><span class="mini-heart">${icon('heart')}</span><h2>${S.cutoff?'A fresh little page.':'Our story starts here.'}</h2><p>${S.cutoff?'Your view is clear. Your partner’s memories are still theirs.':'No grand words needed. A little hello is a lovely beginning.'}</p></div>`);return items}
  if(S.hasMore)add('older','<button class="more-btn" data-action="older">Earlier little moments ↑</button>');
  if(!S.hasMore&&!S.cutoff)add('welcome',`<div class="welcome-moment"><span class="mini-heart">${icon('heart')}</span><h2>A little world, with you in it.</h2><p>For the big feelings and the tiny details.<br>There’s a place for all of them here.</p></div>`);
@@ -478,14 +487,15 @@ function updateMessages(force){
   const el=$('#messages');if(!el)return;
   const near=force??nearBottom(),top=el.scrollTop;
   const existing=new Map([...el.children].map(node=>[node.dataset.logKey,node]));
-  let cursor=el.firstChild;
+  const latestIds=new Set(S.messages.slice(-3).map(m=>'message-'+m.id));
+  let cursor=el.firstChild,cascade=0;
   for(const item of logItems()){
    let node=existing.get(item.key);
    if(!node||renderSignatures.get(node)!==item.signature){
     const t=document.createElement('template');t.innerHTML=item.html();node=t.content.firstElementChild;
     node.dataset.logKey=item.key;renderSignatures.set(node,item.signature);
-    if(!existing.has(item.key)&&item.key==='message-'+S.messages.at(-1)?.id&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-     chatView.enterMessage(node.querySelector('.message-main'),node.classList.contains('own'));
+    if(!existing.has(item.key)&&latestIds.has(item.key)&&!S.older&&near&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+     chatView.enterMessage(node.querySelector('.message-main'),node.classList.contains('own'),cascade++*30);
     }
    }
    if(node===cursor)cursor=cursor.nextSibling;
@@ -511,6 +521,7 @@ async function send() {
   let input = $("#message-input");
   let body = input.value.trim();
   if (!body) return;
+  chatView?.sendPulse?.(input.form?.querySelector(".send .icon"));
   const wasOlder=S.older||loadingOlder,epoch=sessionEpoch;
   if (S.edit) {
     const edit=S.edit,mid=edit.id,epoch=sessionEpoch;if(edit.saving)return;edit.saving=true;

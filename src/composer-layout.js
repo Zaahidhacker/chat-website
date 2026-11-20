@@ -1,6 +1,6 @@
 import {move,timing} from './motion-system.js';
 let input,observer,mirror,host,writeFrame=0,lastWidth=0,lastHeight=0;
-export function fitComposer(el){if(el!==input||!mirror)return;mirror.textContent=(el.value||'')+'\u200b';const send=el.form?.querySelector('.send'),ready=!!el.value.trim();if(send&&send.hasAttribute('data-has-text')!==ready){send.toggleAttribute('data-has-text',ready);move(send.querySelector('.icon'),[{transform:ready?'rotate(-8deg)':'rotate(4deg)'},{transform:'none'}],{duration:timing.micro})}}
+export function fitComposer(el){if(el!==input||!mirror)return;mirror.textContent=(el.value||'')+'\u200b';const send=el.form?.querySelector('.send'),ready=!!el.value.trim();if(send&&send.hasAttribute('data-has-text')!==ready){send.toggleAttribute('data-has-text',ready);move(send.querySelector('.icon'),[{transform:ready?'rotate(-10deg) scale(1.12)':'rotate(5deg) scale(.96)'},{transform:'none'}],{duration:timing.micro})}}
 export function observeComposer(el){
  observer?.disconnect();cancelAnimationFrame(writeFrame);host?.remove();mirror=null;host=null;input=el;lastWidth=0;lastHeight=0;if(!el)return;
  const style=getComputedStyle(el);host=document.createElement('div');host.setAttribute('aria-hidden','true');host.inert=true;mirror=document.createElement('div');host.attachShadow({mode:'closed'}).append(mirror);

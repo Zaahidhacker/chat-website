@@ -14,7 +14,8 @@ export function release(el,from,velocity=0){
  stopMotion(el);el.style.removeProperty('transform');if(reducedMotion())return;
  const path=springSamples(from,velocity);return move(el,path.map(x=>({transform:`translateX(${x}px)`})),{duration:(path.length-1)/120*1000,easing:'linear'});
 }
-export function enterMessage(el,own){return move(el,[{transform:`translate(${own?5:-5}px,4px)`},{transform:'none'}],{duration:180})}
+export function enterMessage(el,own,delay=0){return move(el,[{opacity:0,transform:`translate(${own?6:-6}px,6px) scale(.98)`},{opacity:1,transform:'none'}],{duration:180,delay})}
+export function sendPulse(el){return move(el,[{transform:'scale(.8) rotate(-10deg)'},{transform:'none'}],{duration:140})}
 export function enterPanel(el){clearExitLayers();return move(el,[{opacity:.6,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:timing.panel})}
 export function exitPanel(el){return move(el,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(6px)'}],{duration:130,fill:'forwards'})}
 function clear(){for(const [el]of active)stopMotion(el)}

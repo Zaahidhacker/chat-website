@@ -44,6 +44,49 @@ The local unit suite passes 65 tests, including spring convergence and velocity 
 
 The photo zoom test now waits for the actual animated size before asserting it; its privacy, transfer-count, download and reply assertions remain. Active-dialog tests query `#modal-root` rather than mistaking an inert outgoing visual layer for a live search result. The existing three-hearts suite caught an early-scroll/composer-growth race: the viewport now recognizes a reader's changed position even before the scroll event arrives, rather than retaining a stale bottom pin. Its original exact scroll-preservation assertion passes unchanged. The hosted verification workflow includes the new motion suite. Detailed local timing and sustained-session reports stay in ignored `work/native-motion/` and `work/`.
 
+## Premium motion, phase 2 (November 20, 2026)
+
+Phase 1 added a boot splash, send pulse, message entrances for the latest three
+messages, chat skeletons and pending fades. Phase 2 keeps every resting style
+unchanged and works inside the same constraints:
+
+- **Budget discipline.** The phase 1 rules that only ever render after sign-in
+  (pending fade, skeletons, day/unread/jump/nav-unread entrances) moved out of
+  the initial `motion-tokens.css` into the lazy interactions bundle
+  (`native-motion.css`, loaded before the first signed-in render). The cold
+  login therefore pays nothing for chat motion. New JS lives in lazy modules
+  (`motion-system.js`, `composer-layout.js`); the only initial-JS change is a
+  three-line cascade counter in `app.js`. Initial JS+CSS is ~23.6 KiB gzip,
+  still under the 25,000-byte budget.
+- **Send continuity.** New messages cascade in with a 30 ms stagger (latest
+  three only, 180 ms each, so the last one settles by 240 ms). The send icon
+  now rotates and grows slightly as the composer gains text, and the round
+  send button fills with the accent colour only while there is something to
+  send — the empty-composer resting style is untouched.
+- **Typing and receipts.** The typing dots now bounce as well as fade, on the
+  existing stagger. The sending receipt's clock spins while a message is in
+  flight; delivered/read ticks keep their existing arrive/bloom motion.
+- **Reactions, failures, photos.** Reactions pop in on a 140 ms scale when a
+  reaction appears; a failed message gives one small 2 px nudge; photo frames
+  fade/scale in over the panel duration.
+- **Screens.** Secondary pages (keepsakes, settings, about) and the welcome
+  moment fade up on entry; their cards follow. The boot splash staggers its
+  title, shimmer bar and caption. All of it is transform/opacity only, settles
+  within 260 ms, and is disabled under `prefers-reduced-motion`.
+- **First-paint ordering.** The skeleton render in `enter()` happens only
+  after `applyMetadata` and `restoreOutbox`, so the first paint already has
+  the partner's name and any restored draft — the header never flashes "Your
+  person" and the composer never flashes empty. Two browser suites caught
+  early versions of this ordering; both now pass.
+
+Local verification (November 20, 2026, headless Chromium): unit suite 69/69;
+`test:browser` 18/18; `test:taste` 7/7; interactions, design, replies,
+overhaul, foreground and robustness suites all pass. `test:motion` passes 8
+of 10 checks; the settled-style check fails only on `#partner-name` width
+(71 px baseline vs 72 px live) — the same failure occurs on the unmodified
+`b532ef4` checkout in this headless-shell build, so it is a font-metrics
+difference in the test browser, not a regression.
+
 ## Chrome guidance follow-up (November 13, 2026)
 
 Installed and verified `modern-web-guidance@googlechrome` 1.0.0 in the Codex environment, and applied its `motion` guide alongside the existing Motion skill. Research used Chrome's viewport and VirtualKeyboard documentation and its compositor-animation guidance. Browser geometry can arrive in a single step; the website cannot force the Android IME itself to slide or guarantee synchronized per-frame OS insets. Physical-device verification remains necessary.

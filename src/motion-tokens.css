@@ -3,4 +3,6 @@
 .dream-login button:not(:disabled):active{transform:none;scale:.97}
 @starting-style{.dream-login [data-purpose=auth-card-container]{opacity:.6;transform:translateY(6px)}}
 .dream-login [data-purpose=auth-card-container]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+/* Post-sign-in motion lives in the lazy interactions bundle (native-motion.css),
+   so the cold login stays inside its 25 KB gzip budget. */
 @media(prefers-reduced-motion:reduce){.dream-login [data-purpose=auth-card-container],.dream-login button{transition:none}.dream-login button:active{scale:1}}
