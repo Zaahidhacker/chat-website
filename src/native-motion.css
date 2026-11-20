@@ -42,13 +42,15 @@
 .message.pending .message-main{opacity:.78;transition:opacity var(--motion-micro) ease}
 .message.failed .message-main{animation:failed-nudge .3s ease}
 @keyframes failed-nudge{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
-.skeleton-line{height:12px;border-radius:999px;background:linear-gradient(90deg,var(--received) 25%,var(--panel2) 50%,var(--received) 75%);background-size:200% 100%;animation:skeleton-shimmer 1.4s ease infinite}
+.skeleton-line{position:relative;overflow:hidden;height:12px;border-radius:999px;background:var(--received)}
+.skeleton-line::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);transform:translateX(-100%);animation:skeleton-shimmer 1.4s ease infinite}
 .chat-skeleton{margin:20px 0;display:flex;flex-direction:column;gap:8px;max-width:min(78%,600px)}
 .chat-skeleton.own{margin-left:auto;align-items:flex-end}
-@keyframes skeleton-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes skeleton-shimmer{to{transform:translateX(100%)}}
 .page-skeleton{display:flex;flex-direction:column;gap:10px;max-width:420px}
-@starting-style{.day,.unread-divider,.jump,.nav-unread{opacity:0;transform:translateY(4px)}.content-page{opacity:.6;transform:translateY(8px)}.welcome-moment{opacity:0;transform:translateY(6px)}.message .reaction{opacity:0;scale:.6}.photo-frame{opacity:0;transform:scale(.97)}}
-.day,.unread-divider,.jump,.content-page,.welcome-moment{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
+@starting-style{.day,.unread-divider,.jump,.nav-unread{opacity:0;transform:translateY(4px)}.content-page{opacity:.6;transform:translateY(8px)}.welcome-moment{opacity:0;transform:translateY(6px)}.message .reaction{opacity:0;scale:.6}.photo-frame{opacity:0;transform:scale(.97)}.chat-header{opacity:.7;transform:translateY(-4px)}.banner{opacity:0}.composer-area{opacity:0;transform:translateY(6px)}.sidebar .brand,.sidebar .side-card,.sidebar .side-person{opacity:0;transform:translateY(6px)}.message .avatar{opacity:0;scale:.85}.more-btn{opacity:0;transform:translateY(4px)}.search-moment{opacity:0;transform:translateY(6px)}.empty{opacity:0}.page-heading{opacity:0;transform:translateY(6px)}}
+.day,.unread-divider,.jump,.content-page,.welcome-moment,.chat-header,.banner,.composer-area,.sidebar .brand,.sidebar .side-card,.sidebar .side-person,.more-btn,.search-moment,.empty,.page-heading{transition:opacity var(--motion-micro) ease,transform var(--motion-panel) var(--motion-ease)}
+.message .avatar{transition:opacity var(--motion-micro) ease,scale var(--motion-micro) var(--motion-ease)}
 .message .reaction{transition:opacity var(--motion-micro) ease,scale var(--motion-micro) var(--motion-ease),background-color var(--motion-micro) ease}
 .photo-frame{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 .nav-unread{animation:nav-unread-in var(--motion-micro) ease-out}
@@ -57,3 +59,12 @@
 .composer .send[data-has-text]{background:var(--accent);color:var(--bg)}
 @starting-style{.content-page .note,.content-page .setting-row{opacity:0;transform:translateY(6px)}}
 .content-page .note,.content-page .setting-row{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+/* Phase 3 performance: each message paints and lays out on its own, so
+   inserting one never re-renders the whole conversation. */
+.message{contain:content}
+/* Gentle motion: no screen blur, no looping sparkle, no sweeping shimmer.
+   One-shot entrances stay — they are cheap transform/opacity work. */
+[data-motion=lite] .modal-overlay{backdrop-filter:none}
+[data-motion=lite] .skeleton-line::after,[data-motion=lite] .typing i,[data-motion=lite] .receipt[data-status="Sending"] .receipt-checks{animation:none}
+[data-motion=lite] .app-layout :is(.icon-btn,.nav,.send):not(:disabled):hover>.icon{translate:0}
+@media(prefers-reduced-motion:reduce){.skeleton-line::after{animation:none}}

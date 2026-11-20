@@ -42,6 +42,18 @@ try{
  await check('theme choices announce selection and preserve existing messages and saved items',async()=>{
   const ids=fixture.messages.map(m=>m.id),saved=[...fixture.favorites.get(users[0].id)||[]];await page.locator('.sidebar [data-action=page-settings]').click();await page.getByRole('button',{name:'Soft Love',exact:true}).click();await page.locator('[data-action=theme-light][aria-pressed=true]').waitFor();assert.equal(await page.getByRole('button',{name:'Soft Love',exact:true}).getAttribute('aria-pressed'),'true');assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('light')),true);await page.getByRole('button',{name:'Midnight Romance',exact:true}).click();await page.locator('[data-action=theme-dark][aria-pressed=true]').waitFor();assert.equal(await page.getByRole('button',{name:'Midnight Romance',exact:true}).getAttribute('aria-pressed'),'true');await page.locator('.sidebar [data-action=page-chat]').click();await page.locator('#message-input').waitFor();assert.deepEqual(fixture.messages.map(m=>m.id),ids);assert.deepEqual([...fixture.favorites.get(users[0].id)||[]],saved);assert.equal(await page.locator('.sidebar [data-action=page-chat]').getAttribute('aria-current'),'page');
  });
+ await check('gentle motion switch flips, persists and survives reload',async()=>{
+  await page.locator('.sidebar [data-action=page-settings]').click();
+  const sw=page.getByRole('switch',{name:'Gentle motion for this device'});await sw.waitFor();
+  const before=await page.evaluate(()=>document.documentElement.dataset.motion==='lite');
+  await sw.click();await page.waitForFunction(prev=>(document.documentElement.dataset.motion==='lite')!==prev,before);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('universe-motion')),before?'full':'lite');
+  assert.equal(await sw.getAttribute('aria-checked'),String(!before));
+  await sw.click();await page.waitForFunction(prev=>(document.documentElement.dataset.motion==='lite')===prev,before);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('universe-motion')),before?'lite':'full');
+  await page.reload();await page.locator('#message-input').waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.dataset.motion==='lite'),before);
+ });
  await check('changing appearance preserves both latest-message and earlier-reading positions with an unsent draft',async()=>{
   await page.locator('#message-input').fill('A draft stays with my reading position.');
   for(const bottom of [true,false]){

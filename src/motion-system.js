@@ -3,6 +3,11 @@ export const ease='cubic-bezier(.22,1,.36,1)';
 import {springSamples,springs} from './motion-physics.js';
 const reduced=matchMedia('(prefers-reduced-motion: reduce)'),active=new Map();
 export const reducedMotion=()=>reduced.matches||document.hidden;
+export const liteMotion=()=>document.documentElement.dataset.motion==='lite';
+// Weak hardware can ask for calm motion itself: a long animation frame means
+// the device is struggling, so background sparkle and blur switch off for the
+// rest of the visit. A manual "full motion" choice is always respected.
+(function watchJank(){if(liteMotion()||reduced.matches)return;try{if(localStorage.getItem('universe-motion')==='full')return}catch{} try{const o=new PerformanceObserver(l=>{for(const e of l.getEntries())if(e.blockingDuration>150){document.documentElement.dataset.motion='lite';o.disconnect();break}});o.observe({type:'long-animation-frame',buffered:true});setTimeout(()=>o.disconnect(),15000)}catch{}})();
 export function stopMotion(el,commit=false){const a=active.get(el);if(!a)return;if(commit)try{a.commitStyles()}catch{}a.cancel();active.delete(el)}
 export function move(el,frames,options={}){
  if(!el)return Promise.resolve();stopMotion(el);

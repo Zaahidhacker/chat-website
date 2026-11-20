@@ -87,6 +87,45 @@ of 10 checks; the settled-style check fails only on `#partner-name` width
 `b532ef4` checkout in this headless-shell build, so it is a font-metrics
 difference in the test browser, not a regression.
 
+## Performance, phase 3 (November 20, 2026)
+
+The motion was beautiful but sometimes lagged on weaker hardware. Measured
+first, then fixed — with a small profiler (`work/perf-audit.mjs`, 220
+messages, 6x CPU throttling) before and after:
+
+- **What lagged.** Sending: p95 frame 39.7 ms, worst 83 ms, 6 frames over
+  50 ms. Opening a dialog: p95 65.7 ms, worst 122 ms. The rAF callbacks
+  themselves were only ~17 ms — the cost was rendering, not JavaScript.
+- **What caused it.** The skeleton shimmer animated `background-position`
+  (a repaint every frame); the dialog overlay blurred the whole screen
+  (`backdrop-filter: blur(4px)`) while it faded in; inserting a message
+  re-styled the entire 200-node list; and the login page ran 10 looping
+  animations at once (twinkles, orbits, floating badges, glow).
+- **Fixes.**
+  - Skeleton shimmer is now a light streak sweeping across on `transform`
+    (compositor only); the old `background-position` animation is gone.
+  - Every message has `contain: content`, so inserting one never re-renders
+    the rest of the conversation.
+  - Gentle motion (`data-motion=lite` on `<html>`): no screen blur, no
+    looping sparkle, no sweeping shimmer, no hover lifts. One-shot
+    entrances stay — they are cheap transform/opacity work. It switches on
+    three ways: an inline script in `index.html` before first paint when
+    the device reports ≤ 4 GB memory or ≤ 4 CPU cores; a long-animation-frame
+    watcher in `motion-system.js` that engages it if the device actually
+    stutters (a manual "full motion" choice is always respected); and a
+    "Gentle motion for this device" switch in Settings that persists in
+    `localStorage` and survives reload (covered by a new `test:taste` case).
+  - Every remaining element now moves: chat header, banner, composer area,
+    sidebar brand/cards/person, message avatars, the "earlier moments"
+    button, search results, empty states, page headings, and the login hero
+    narrative. All of it is transform/opacity only and settles within
+    260 ms, so resting styles are untouched.
+- **Results (6x CPU).** Sending p95 39.7 → 31.6 ms, worst 83 → 50 ms, zero
+  frames over 50 ms in full motion. Dialog p95 65.7 → 36.1 ms in gentle
+  motion. Login idle runs 0 looping animations in gentle mode (10 before).
+  Long tasks across the audit fell from 15 to 10. The cold login stays at
+  23.7 KiB gzip, under the 25 KB budget.
+
 ## Chrome guidance follow-up (November 13, 2026)
 
 Installed and verified `modern-web-guidance@googlechrome` 1.0.0 in the Codex environment, and applied its `motion` guide alongside the existing Motion skill. Research used Chrome's viewport and VirtualKeyboard documentation and its compositor-animation guidance. Browser geometry can arrive in a single step; the website cannot force the Android IME itself to slide or guarantee synchronized per-frame OS insets. Physical-device verification remains necessary.

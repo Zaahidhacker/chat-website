@@ -5,4 +5,7 @@
 .dream-login [data-purpose=auth-card-container]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 /* Post-sign-in motion lives in the lazy interactions bundle (native-motion.css),
    so the cold login stays inside its 25 KB gzip budget. */
-@media(prefers-reduced-motion:reduce){.dream-login [data-purpose=auth-card-container],.dream-login button{transition:none}.dream-login button:active{scale:1}}
+[data-motion=lite] :is(.orbit-ellipse-1,.orbit-ellipse-2,.floating-badge,.floating-badge-delayed,.planet-glow,[class*=star-twinkle]){animation:none}
+@starting-style{.dream-login [data-purpose=hero-narrative]{opacity:.6;transform:translateY(8px)}}
+.dream-login [data-purpose=hero-narrative]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+@media(prefers-reduced-motion:reduce){.dream-login [data-purpose=auth-card-container],.dream-login [data-purpose=hero-narrative],.dream-login button{transition:none}.dream-login button:active{scale:1}}

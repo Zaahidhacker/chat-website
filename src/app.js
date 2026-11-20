@@ -776,6 +776,14 @@ async function action(a, el) {
     }
     return;
   }
+  if (a === "motion-lite") {
+    const lite = document.documentElement.dataset.motion !== "lite";
+    if (lite) document.documentElement.dataset.motion = "lite";
+    else document.documentElement.removeAttribute("data-motion");
+    try { localStorage.setItem("universe-motion", lite ? "lite" : "full"); } catch {}
+    render();
+    return;
+  }
   if (a === "cancel-reply") {
     if(S.edit)draft=S.editDraft||'';S.reply = S.edit = null;
     $("#message-input").value = draft;chatView.fitComposer($("#message-input"));
