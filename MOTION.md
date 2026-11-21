@@ -165,6 +165,12 @@ down, and makes the moment feel like the rest of the site:
 
 ## Send morph — the message itself becomes a liquid-glass bubble (November 21, 2026)
 
+> **Removed the same day** — see "Send bounce, refined" below. Zaahid
+> liked the liquid animation but decided the glass was too much: the
+> morph, its `.morphing` / `.morph-settling` classes and the glass
+> `::after` skin are gone entirely, and the plain bounce is the send
+> animation again. This section is kept as history only.
+
 Zaahid asked for the send to feel like iOS 26 liquid glass — but with the
 message ITSELF transforming into the bubble, no separate droplet flying
 over it, and much faster, with no noticeable delay. This replaces the
@@ -272,3 +278,46 @@ gone; nothing in `src/` references a droplet any more).
 Installed and verified `modern-web-guidance@googlechrome` 1.0.0 in the Codex environment, and applied its `motion` guide alongside the existing Motion skill. Research used Chrome's viewport and VirtualKeyboard documentation and its compositor-animation guidance. Browser geometry can arrive in a single step; the website cannot force the Android IME itself to slide or guarantee synchronized per-frame OS insets. Physical-device verification remains necessary.
 
 Control feedback now covers buttons across app pages, dialogs and photo controls, keyboard focus and fine-pointer hover. Spatial effects opt in under no-preference; passive text stays still and touch does not acquire hover loops. Existing fonts, resting styles, persistence and backend remain unchanged.
+
+## Send bounce, refined — the liquid glass is gone (November 21, 2026)
+
+Zaahid asked for the liquid animation to be removed and the old bouncy
+animation kept and refined: the glass was too much. The morph is gone
+entirely — `enterMessage` has no `flip` branch any more, no button or
+bubble rects are read, no `.morphing` / `.morph-settling` classes exist,
+and `native-motion.css` carries a note forbidding a `::after` skin on
+`.message-main` again. `clearMotion` no longer cleans up morph classes.
+The send is one plain bounce again, for every message (own and
+incoming alike — the `isBubble` third argument at the `updateMessages`
+call site is gone).
+
+- **The refined bounce.** Full: 250 ms, four keyframes —
+  `translateY(8px) scale(.96)` → `translateY(-3px) scale(1.025)` at
+  offset .55 → `translateY(1px) scale(1.004)` at offset .8 → `none`.
+  The -3 px overshoot Zaahid's bounce test pins is unchanged; the new
+  1 px settle keyframe is the refinement — the bubble dips 1 px and
+  lands instead of snapping straight from the overshoot to rest. The
+  fall from the overshoot uses a springy
+  `cubic-bezier(.3,1.25,.4,1)` segment, the rest uses the shared
+  `cubic-bezier(.22,1,.36,1)` ease. Gentle mode is unchanged: 160 ms,
+  `4px` → `-1px` → `none`. No opacity in any keyframe (painted from
+  frame 0), no wall-clock delay, still one `animate()` call on
+  `.message-main`, so `tests/browser.mjs` (his file, byte for byte)
+  still sees exactly one live-timeline entrance per message.
+- **Keyboard-open behaviour is unchanged, and safer than the droplet
+  ever was.** The bounce transform lives on the message itself, so a
+  viewport shift moves message and animation together; the list is
+  still pinned synchronously (`el.scrollTop = el.scrollHeight`) before
+  the insert, so the new message lands at the bottom even as the
+  keyboard dismisses mid-send. The keyboard-open check in the motion
+  suite now asserts the settled landing matches the closed-keyboard
+  landing within 8 px, and that mid-bounce the bubble stays within
+  12 px of its resting place in both axes.
+- **Tests.** `tests/native-motion-browser.mjs` now has "own message
+  bounces in place with no liquid-glass skin" (exactly one animation,
+  -3 px overshoot, first keyframe `translateY(8px)`, no
+  `.morphing` / `.morph-settling` classes anywhere, no FLIP travel
+  keyframe, no `borderRadius` keyframe; gentle part asserts the same
+  with no glass; reduced part asserts no animation and the message
+  still sends) and the rewritten keyboard-open landing check above.
+  Both pass. Bundle stays 23.9 KiB gzip, under the 25,000-byte budget.

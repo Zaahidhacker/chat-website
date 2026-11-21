@@ -507,19 +507,16 @@ function updateMessages(force){
    if(node===cursor)cursor=cursor.nextSibling;
    else el.insertBefore(node,cursor);
    // A template node has an inactive animation timeline until it joins the page.
-   // The send morph is a FLIP: the list is pinned synchronously first so
-   // the final rect is measured after the scroll (not before it), and the
-   // button rect is read inside enterMessage in the same synchronous block
-   // as the final rect, so both belong to the same layout even if the
-   // keyboard dismisses mid-send. The message itself animates from the
-   // button to its final place in one animate call — no opacity, so the
-   // message is painted from the first frame, and no wall-clock delay, so a
+   // The list is pinned synchronously first so the new message lands at the
+   // bottom even as the keyboard dismisses mid-send. The bounce itself is
+   // one animate() call on .message-main — no opacity, so the message is
+   // painted from the first frame, and no wall-clock delay, so a
    // keyboard/viewport shift mid-flight moves the message and its animation
-   // together instead of stranding a fixed overlay.
+   // together instead of stranding anything.
    if(animate){
     const last=S.messages[S.messages.length-1],isBubble=last&&last.pending&&last.sender===S.user.id&&item.key==='message-'+last.id;
     if(isBubble&&near&&!S.older)el.scrollTop=el.scrollHeight;
-    chatView.enterMessage(node.querySelector('.message-main'),isBubble?0:cascade++*30,isBubble);
+    chatView.enterMessage(node.querySelector('.message-main'),isBubble?0:cascade++*30);
    }
   }
   while(cursor){const next=cursor.nextSibling;cursor.remove();cursor=next}

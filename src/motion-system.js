@@ -21,60 +21,26 @@ export function release(el,from,velocity=0){
  stopMotion(el);el.style.removeProperty('transform');if(reducedMotion())return;
  const path=springSamples(from,velocity);return move(el,path.map(x=>({transform:`translateX(${x}px)`})),{duration:(path.length-1)/120*1000,easing:'linear'});
 }
-export function enterMessage(el,delay=0,flip=false){
+// The send bounce, refined: one animate() call on .message-main, no
+// opacity in the keyframes (the message is painted from frame 0), no
+// wall-clock delay, and the transform lives on the element — so a
+// keyboard/viewport shift moves the message and its animation together
+// instead of stranding anything. The -3px overshoot is pinned by
+// Zaahid's bounce test in tests/browser.mjs; the extra 1px settle
+// keyframe is what makes the landing soft instead of snapping straight
+// from the overshoot to rest. No glass skin, no FLIP travel — the
+// liquid-glass morph was removed at Zaahid's request (too much), and
+// this plain bounce is the whole send animation.
+export function enterMessage(el,delay=0){
  if(!el?.isConnected)return Promise.resolve();
  const gentle=liteMotion();
- if(reducedMotion()||!flip){
-  const frames=gentle
-   ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
-   :[{transform:'translateY(8px) scale(.96)'},{offset:.58,transform:'translateY(-3px) scale(1.025)'},{transform:'none'}];
-  return move(el,frames,{duration:gentle?160:230,delay});
- }
- // FLIP send morph: the message itself travels from the send button and
- // grows from a small liquid-glass blob into its final bubble. This must
- // stay ONE animate() call on .message-main — the bounce test counts
- // animate() calls there, so travel, squash and border-radius all live in
- // these keyframes; the glass skin is a CSS class (.morphing), never a
- // second animation. Every keyframe carries a transform (the test reads
- // them), none carries opacity (the message is painted from frame 0),
- // and there is no wall-clock delay. Because the transform lives on the
- // element, a keyboard/viewport shift moves the message and its animation
- // together instead of stranding a fixed overlay.
- // The button rect is read HERE, in the same synchronous block as the
- // final rect — never captured earlier. The keyboard can dismiss between
- // send() and this frame, and a rect captured at send time would belong
- // to the old layout: in the harness that put the morph 248px too high.
- const btn=document.querySelector('.composer .send')?.getBoundingClientRect();
- const bubble=el.querySelector('.bubble'),er=el.getBoundingClientRect(),br=bubble?.getBoundingClientRect();
- const origin=btn&&btn.width?{x:btn.left+btn.width/2,y:btn.top+btn.height/2,size:Math.min(btn.width,btn.height)}:null;
- if(!br||!br.width||!br.height||!origin?.size){
-  const plain=gentle
-   ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
-   :[{transform:'translateY(8px) scale(.96)'},{offset:.58,transform:'translateY(-3px) scale(1.025)'},{transform:'none'}];
-  return move(el,plain,{duration:gentle?160:230,delay});
- }
- const cx=br.left+br.width/2,cy=br.top+br.height/2;
- const sx=+Math.max(.06,Math.min(.9,origin.size/br.width)).toFixed(3),sy=+Math.max(.06,Math.min(.9,origin.size/br.height)).toFixed(3);
- const dx=Math.round(origin.x-cx),dy=Math.round(origin.y-cy);
- const mx=+(sx+(1-sx)*.55).toFixed(3),my=+(sy+(1-sy)*.55).toFixed(3);
- const tx=Math.round(dx*.42),ty=Math.round(dy*.42)-26,R='18px 18px 5px 18px',out='cubic-bezier(.22,1,.36,1)';
  const frames=gentle
-  ?[{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,borderRadius:'50%',offset:0,easing:out},
-    {transform:'translate(0px,2px) scale(1.01)',borderRadius:R,offset:.62,easing:out},
-    {transform:'translateY(-1px)',borderRadius:R,offset:.82},
-    {transform:'none',borderRadius:R,offset:1}]
-  :[{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,borderRadius:'50%',offset:0,easing:out},
-    {transform:`translate(${tx}px,${ty}px) scale(${mx},${my})`,borderRadius:'42% 58% 55% 45% / 55% 45% 58% 42%',offset:.38,easing:out},
-    {transform:'translate(0px,3px) scale(1.015)',borderRadius:R,offset:.68,easing:'cubic-bezier(.3,1.25,.4,1)'},
-    {transform:'translateY(-3px) scale(1.025)',borderRadius:R,offset:.84,easing:out},
-    {transform:'none',borderRadius:R,offset:1}];
- el.style.transformOrigin=(cx-er.left).toFixed(1)+'px '+(cy-er.top).toFixed(1)+'px';
- el.classList.add('morphing');
- return move(el,frames,{duration:gentle?220:300,easing:'linear',delay}).finally(()=>{
-  // Let the glass skin fade out before the class comes off.
-  el.classList.add('morph-settling');
-  setTimeout(()=>{el.classList.remove('morphing','morph-settling');el.style.removeProperty('transform-origin')},170);
- });
+  ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
+  :[{transform:'translateY(8px) scale(.96)',offset:0,easing:'cubic-bezier(.22,1,.36,1)'},
+    {transform:'translateY(-3px) scale(1.025)',offset:.55,easing:'cubic-bezier(.3,1.25,.4,1)'},
+    {transform:'translateY(1px) scale(1.004)',offset:.8,easing:'cubic-bezier(.22,1,.36,1)'},
+    {transform:'none',offset:1}];
+ return move(el,frames,{duration:gentle?160:250,delay});
 }
 export function sendPulse(el){return move(el,[{transform:'scale(.8) rotate(-10deg)'},{transform:'none'}],{duration:140})}
 export function enterPanel(el){clearExitLayers();return move(el,[{opacity:.6,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:timing.panel})}
@@ -93,5 +59,5 @@ export function exitOverlay(overlay){
  exitPanel(panel).finally(()=>{ghost.remove();ghosts.delete(ghost)});
 }
 export function clearExitLayers(){for(const ghost of ghosts){stopMotion(ghost);const panel=ghost.querySelector('.modal');if(panel)stopMotion(panel);ghost.remove()}ghosts.clear()}
-export function clearMotion(){clear();clearExitLayers();for(const el of document.querySelectorAll('.message-main.morphing'))el.classList.remove('morphing','morph-settling')}
+export function clearMotion(){clear();clearExitLayers()}
 reduced.addEventListener('change',()=>{if(reduced.matches)clearMotion()});document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMotion()});
