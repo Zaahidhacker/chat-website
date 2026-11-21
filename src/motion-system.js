@@ -29,6 +29,49 @@ export function enterMessage(el,delay=0){
  return move(el,frames,{duration:gentle?160:230,delay});
 }
 export function sendPulse(el){return move(el,[{transform:'scale(.8) rotate(-10deg)'},{transform:'none'}],{duration:140})}
+// Send droplet: one liquid-glass bubble that leaves the send button and
+// dissolves into the new message as it pops in. The travelling shell animates
+// transform/opacity only; the glass morph (scale + border-radius wobble) lives
+// on the inner element so the two never fight. The droplet is removed on
+// finish, on cancel, on hide and on sign-out, so it never outlives its
+// ~500 ms flight — a failed send can never leave one behind.
+const droplets=new Set();
+let bubbleArrival=0;
+export function bubbleEntranceDelay(){return Math.max(0,bubbleArrival-performance.now())}
+export function sendBubble(from){
+ if(reducedMotion()||!from?.animate)return;
+ const list=document.querySelector('#messages'),btn=from.getBoundingClientRect();
+ if(!btn.width||!list||droplets.size>=3)return;
+ const lite=liteMotion(),r=list.getBoundingClientRect(),size=40;
+ const sx=btn.left+btn.width/2,sy=btn.top+btn.height/2;
+ const dx=r.right-52-sx,dy=r.bottom-40-sy;
+ const el=document.createElement('div');
+ el.className='send-droplet'+(lite?' send-droplet--lite':'');
+ el.setAttribute('aria-hidden','true');
+ el.style.setProperty('--drop-x',(sx-size/2)+'px');
+ el.style.setProperty('--drop-y',(sy-size/2)+'px');
+ const glass=document.createElement('i');el.append(glass);
+ document.body.append(el);droplets.add(el);
+ const flight=lite?420:500;
+ bubbleArrival=performance.now()+flight-180;
+ const travel=el.animate([
+  {transform:'translate(0px,0px)',opacity:0,offset:0},
+  {transform:`translate(${Math.round(dx*-0.18)}px,${Math.round(dy*0.35)}px)`,opacity:1,offset:.12},
+  {transform:`translate(${Math.round(dx*-0.34)}px,${Math.round(dy*0.68)}px)`,opacity:1,offset:.55},
+  {transform:`translate(${Math.round(dx*0.85)}px,${Math.round(dy*0.92)}px)`,opacity:1,offset:.8},
+  {transform:`translate(${Math.round(dx)}px,${Math.round(dy)}px)`,opacity:0,offset:1},
+ ],{duration:flight,easing:ease,fill:'forwards'});
+ let morph=null;
+ if(!lite)morph=glass.animate([
+  {transform:'scale(.7)',borderRadius:'50%',offset:0},
+  {transform:'scale(1.28)',borderRadius:'46% 54% 58% 42% / 52% 44% 56% 48%',offset:.35},
+  {transform:'scale(1.05)',borderRadius:'54% 46% 44% 56% / 46% 56% 48% 54%',offset:.7},
+  {transform:'scale(.55)',borderRadius:'50%',offset:1},
+ ],{duration:flight,easing:'linear',fill:'forwards'});
+ const done=()=>{travel.cancel();morph?.cancel();el.remove();droplets.delete(el)};
+ travel.finished.catch(()=>{}).finally(done);
+}
+function clearDroplets(){for(const el of droplets){el.getAnimations().forEach(a=>a.cancel());el.remove()}droplets.clear();bubbleArrival=0}
 export function enterPanel(el){clearExitLayers();return move(el,[{opacity:.6,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:timing.panel})}
 export function exitPanel(el){return move(el,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(6px)'}],{duration:130,fill:'forwards'})}
 function clear(){for(const [el]of active)stopMotion(el)}
@@ -45,5 +88,5 @@ export function exitOverlay(overlay){
  exitPanel(panel).finally(()=>{ghost.remove();ghosts.delete(ghost)});
 }
 export function clearExitLayers(){for(const ghost of ghosts){stopMotion(ghost);const panel=ghost.querySelector('.modal');if(panel)stopMotion(panel);ghost.remove()}ghosts.clear()}
-export function clearMotion(){clear();clearExitLayers()}
+export function clearMotion(){clear();clearExitLayers();clearDroplets()}
 reduced.addEventListener('change',()=>{if(reduced.matches)clearMotion()});document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMotion()});

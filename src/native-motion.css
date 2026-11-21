@@ -57,6 +57,22 @@
 @keyframes nav-unread-in{from{opacity:0;transform:scale(.9)}}
 /* The send button fills with accent only once there is something to send. */
 .composer .send[data-has-text]{background:var(--accent);color:var(--bg)}
+/* Send droplet: one liquid-glass bubble that leaves the send button and
+   dissolves into the new message. Fixed, pointer-transparent, removed on
+   finish; the travelling shell is transform/opacity only and the glass morph
+   (scale + border-radius wobble) runs on the inner element. */
+.send-droplet{position:fixed;left:var(--drop-x,0);top:var(--drop-y,0);width:40px;height:40px;pointer-events:none;z-index:60}
+.send-droplet i{position:relative;display:block;width:100%;height:100%;border-radius:50%;
+ background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.85),rgba(255,255,255,.28) 38%,rgba(255,183,207,.22) 62%,rgba(255,255,255,.10) 78%);
+ border:1.5px solid rgba(255,255,255,.85);
+ box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -2px 4px rgba(255,255,255,.25),inset 0 0 14px rgba(255,255,255,.22),0 0 22px rgba(255,183,207,.45),0 0 8px rgba(255,255,255,.35),0 4px 14px rgba(20,10,20,.25);
+ backdrop-filter:blur(6px) saturate(1.8);-webkit-backdrop-filter:blur(6px) saturate(1.8)}
+.send-droplet i::after{content:"";position:absolute;left:14%;top:9%;width:46%;height:32%;border-radius:50%;background:rgba(255,255,255,.95);filter:blur(1px);transform:rotate(-18deg)}
+/* Gentle motion: no backdrop blur, no specular highlight, no morph — the
+   droplet is a plain translucent circle that still travels and fades. */
+[data-motion=lite] .send-droplet i{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(255,255,255,.30);border:1.5px solid rgba(255,255,255,.6);box-shadow:0 0 12px rgba(255,183,207,.22),0 2px 8px rgba(20,10,20,.18)}
+[data-motion=lite] .send-droplet i::after{display:none}
+@media(prefers-reduced-motion:reduce){.send-droplet{display:none}}
 @starting-style{.content-page .note,.content-page .setting-row{opacity:0;transform:translateY(6px)}}
 .content-page .note,.content-page .setting-row{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 /* Phase 3 performance: each message paints and lays out on its own, so

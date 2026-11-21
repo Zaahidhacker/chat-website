@@ -14,6 +14,40 @@ try{
  await check('progressive visual viewport resize tracks the composer once and keeps latest messages pinned',async()=>{await bottom(a);await a.locator('#message-input').focus();for(const height of [850,810,740,650,560,470,410,460,540,680,810,892]){await viewport(a,height);const state=await a.evaluate(()=>{const l=document.querySelector('#messages'),c=document.querySelector('#composer').getBoundingClientRect();return{bottom:c.bottom,gap:l.scrollHeight-l.scrollTop-l.clientHeight,height:document.querySelector('.app-layout').clientHeight}});assert(Math.abs(state.height-height)<2);assert(state.bottom<=height+1);assert(state.gap<3,'Latest stays pinned '+JSON.stringify({height,...state}))}assert.equal(await a.locator('#message-input').evaluate(el=>document.activeElement===el),true)});
  await check('toolbar offsets preserve an older reading anchor and pinch zoom remains browser-owned',async()=>{await a.locator('#messages').evaluate(el=>el.scrollTop=el.scrollHeight*.35);await a.waitForTimeout(100);const anchor=await a.evaluate(()=>{const l=document.querySelector('#messages'),r=l.getBoundingClientRect(),n=[...l.querySelectorAll('[data-message]')].find(n=>n.getBoundingClientRect().bottom>r.top+10);return{id:n.dataset.message,y:n.getBoundingClientRect().top}});for(const [h,y]of [[700,0],[520,14],[780,0],[892,0]]){await viewport(a,h,y);assert(Math.abs(await a.locator(`[data-message="${anchor.id}"]`).evaluate(el=>el.getBoundingClientRect().top)-anchor.y)<3)}const before=await a.evaluate(()=>document.documentElement.style.getPropertyValue('--app-height'));await viewport(a,450,20,1.8);assert.equal(await a.evaluate(()=>document.documentElement.style.getPropertyValue('--app-height')),before);await viewport(a,892)});
  await check('multiline growth and rapid typing preserve selection, delivery and bottom anchoring',async()=>{await bottom(a);await a.locator('#message-input').fill('One line\nSecond line\nThird line\nFourth line');await a.locator('#message-input').evaluate(el=>el.setSelectionRange(12,12));await a.waitForTimeout(250);assert.equal(await a.locator('#message-input').evaluate(el=>el.selectionStart),12);assert((await a.locator('#message-input').boundingBox()).height>70);await viewport(a,410);assert((await a.locator('#composer').boundingBox()).y>=0);for(let i=0;i<5;i++){await a.locator('#message-input').fill('Fluid message '+i);await a.getByRole('button',{name:'Send message',exact:true}).click();await b.getByText('Fluid message '+i,{exact:true}).waitFor()}await a.locator('#message-input').fill('A draft while a message arrives');f.add(users[1].id,'An incoming thought while you type');await a.getByText('An incoming thought while you type',{exact:true}).waitFor();assert.equal(await a.locator('#message-input').inputValue(),'A draft while a message arrives');await viewport(a,892)});
+ await check('send droplet leaves the button, dissolves into the message and never lingers',async()=>{
+  await bottom(a);
+  await a.locator('#message-input').fill('A little bubble for you');
+  await a.getByRole('button',{name:'Send message',exact:true}).click();
+  await a.waitForFunction(()=>document.querySelectorAll('.send-droplet').length===1,{timeout:500});
+  // The button box is read after the click: focusing the send button can
+  // shift the composer by a few pixels, so a pre-click box is stale.
+  const btn=await a.locator('.composer .send').boundingBox();
+  const start=await a.locator('.send-droplet').boundingBox();
+  const spawn=await a.locator('.send-droplet').evaluate(el=>({x:parseFloat(el.style.getPropertyValue('--drop-x'))+20,y:parseFloat(el.style.getPropertyValue('--drop-y'))+20}));
+  assert(Math.abs(spawn.x-(btn.x+btn.width/2))<4,'Droplet starts at the send button');
+  assert(Math.abs(spawn.y-(btn.y+btn.height/2))<4);
+  await a.waitForTimeout(260);
+  const mid=await a.locator('.send-droplet').boundingBox();
+  assert(mid.y<start.y-20,'Droplet travels upward');
+  await a.getByText('A little bubble for you',{exact:true}).waitFor();
+  await a.waitForFunction(()=>document.querySelectorAll('.send-droplet').length===0,{timeout:1500});
+  // Gentle motion: simplified droplet, no backdrop blur, still removed.
+  await a.evaluate(()=>{document.documentElement.dataset.motion='lite'});
+  await a.locator('#message-input').fill('A gentle bubble');
+  await a.getByRole('button',{name:'Send message',exact:true}).click();
+  await a.waitForFunction(()=>document.querySelectorAll('.send-droplet').length===1,{timeout:500});
+  assert.equal(await a.locator('.send-droplet i').evaluate(el=>getComputedStyle(el).backdropFilter),'none');
+  await a.waitForFunction(()=>document.querySelectorAll('.send-droplet').length===0,{timeout:1500});
+  await a.evaluate(()=>{delete document.documentElement.dataset.motion});
+  // Reduced motion: no droplet at all, the message still sends.
+  await a.emulateMedia({reducedMotion:'reduce'});
+  await a.locator('#message-input').fill('No bubble, just words');
+  await a.getByRole('button',{name:'Send message',exact:true}).click();
+  await a.waitForTimeout(250);
+  assert.equal(await a.locator('.send-droplet').count(),0);
+  await a.getByText('No bubble, just words',{exact:true}).waitFor();
+  await a.emulateMedia({reducedMotion:'no-preference'});
+ });
  await check('long press opens existing actions; scrolling and cancellation never open them',async()=>{await bottom(b);const article=b.locator('[data-message]').last(),box=await article.locator('.bubble').boundingBox();await b.dispatchEvent(`[data-message="${await article.getAttribute('data-message')}"] .bubble`,'pointerdown',{pointerId:77,pointerType:'touch',isPrimary:true,clientX:box.x+30,clientY:box.y+20});await b.getByRole('dialog',{name:'A little moment.',exact:true}).waitFor();await b.getByRole('button',{name:'Close',exact:true}).click();await b.waitForTimeout(180);await article.locator('.bubble').dispatchEvent('pointerdown',{pointerId:78,pointerType:'touch',isPrimary:true,clientX:box.x+30,clientY:box.y+20});await article.locator('.bubble').dispatchEvent('pointercancel',{pointerId:78,pointerType:'touch',isPrimary:true});await b.waitForTimeout(520);assert.equal(await b.getByRole('dialog').count(),0)});
  await check('dialog exits are noninteractive, interruptible and leave no ghosts or stale focus',async()=>{for(let i=0;i<4;i++){await b.getByRole('button',{name:'Conversation options',exact:true}).click();await b.getByRole('button',{name:'Close',exact:true}).click()}await b.waitForTimeout(200);assert.equal(await b.locator('.motion-ghost').count(),0);assert.equal(await b.locator('#app').evaluate(el=>el.inert),false);assert.equal(await b.evaluate(()=>document.activeElement.getAttribute('aria-label')),'Conversation options')});
  await check('native close requests dismiss dialogs and navigation without changing browser history',async()=>{const available=await b.evaluate(()=>!!window.CloseWatcher);if(!available)return;const history=await b.evaluate(()=>window.history.length);await b.getByRole('button',{name:'Conversation options',exact:true}).click();await b.getByRole('dialog').waitFor();await b.evaluate(()=>window.__closeRequests.at(-1).requestClose());await b.getByRole('dialog').waitFor({state:'hidden'});await b.getByRole('button',{name:'Open navigation',exact:true}).click();await b.getByRole('dialog',{name:'Our spaces',exact:true}).waitFor();await b.evaluate(()=>window.__closeRequests.at(-1).requestClose());await b.getByRole('dialog',{name:'Our spaces',exact:true}).waitFor({state:'hidden'});assert.equal(await b.evaluate(()=>window.history.length),history)});

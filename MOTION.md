@@ -163,6 +163,87 @@ down, and makes the moment feel like the rest of the site:
   it back — the taste suite serves `index.html` under the real CSP and
   asserts zero violations.
 
+## Send droplet — a liquid-glass bubble (November 21, 2026)
+
+Zaahid asked for the send to feel like iOS 26 liquid glass: a water bubble
+that leaves the send button and becomes the message. It is one transient
+element, never a loop, and it costs the cold login nothing.
+
+- **How it works.** `send()` in `app.js` (the single send path — the send
+  button's form submit and the Enter key both go through it) calls
+  `chatView.sendBubble(button)` right before `updateMessages(true)`.
+  `sendBubble` in `motion-system.js` spawns one fixed `<div
+  class="send-droplet" aria-hidden="true">` with an inner `<i>` for the
+  glass, centred exactly on the send button (position from CSS custom
+  properties `--drop-x`/`--drop-y`, so the spawn point is deterministic and
+  testable). The outer shell flies ~500 ms along a slight leftward arc to
+  where the new own bubble lands (bottom-right of `#messages`), on
+  transform/opacity only; the inner glass morphs — scale spring (0.7 →
+  1.28 → 1.05 → 0.55) plus a border-radius wobble — on linear easing, so
+  the blob shape is actually visible mid-flight. The glass itself is a
+  radial highlight, a bright 1.5 px rim, inset top light, a faint pink
+  halo and `backdrop-filter: blur(6px) saturate(1.8)` on the 40 px droplet
+  only. The message entrance is delayed to the droplet's arrival
+  (`bubbleEntranceDelay()`, ~320 ms) — see the merge note below for how
+  that delay works now: it holds back only the bounce, never the message
+  itself. At most 3 droplets fly at once; further sends fall back to the
+  normal cascade entrance.
+- **Merge with the user's send-bounce fix (`a35a4f0`, November 21, 2026).**
+  Zaahid pushed his own commit restoring the send bounce: `enterMessage(el,
+  delay)` with transform-only bounce keyframes (full: 8px scale(.96) →
+  -3px scale(1.025) overshoot → none, 230 ms; gentle: 4px → -1px, 160 ms),
+  `move()` guards (`el?.isConnected`, try/catch around `el.animate`), the
+  entrance called only after `insertBefore` (a template node has an
+  inactive timeline until it joins the page), pending/failed taken out of
+  `messageSignature` so an acknowledgement never re-renders the bubble,
+  and `updateReceipts` toggling `pending`/`failed` classes on the row
+  instead. All three files merged in as-is (`tests/browser.mjs` is his
+  file byte for byte; his bounce test pins exactly one entrance per
+  message, on the live document timeline, with the -3px overshoot, the
+  optimistic text painted while the send RPC is held, and the bubble
+  retained after acknowledgement). The droplet adapted to his bounce: the
+  delay from `bubbleEntranceDelay()` is passed as the `delay` argument of
+  his single `enterMessage` call — his keyframes carry no opacity and no
+  fill, so during the delay the message sits painted at opacity 1 and
+  only the bounce waits for the droplet. No hiding, no
+  cancel-and-reanimate (that would count as a second entrance and fail
+  his test). The droplet itself is unchanged: same spawn, flight, morph,
+  cleanup, gentle/reduced behaviour.
+- **Cleanup.** The droplet is removed when its travel animation finishes,
+  when it is cancelled, on tab hide and on sign-out (`clearDroplets`,
+  called from `clearMotion`). Removal is time-based, never network-based,
+  so a failed send can never leave one behind — the existing failed-message
+  nudge still applies. Nothing about send logic, auth, schema or
+  persistence changed.
+- **Reduced motion:** no droplet at all; the message appears instantly, as
+  before (plus a `.send-droplet{display:none}` kill-switch in CSS).
+  **Gentle mode (`data-motion=lite`):** a plain translucent circle, no
+  backdrop blur, no highlight, no morph — opacity + scale + travel only,
+  420 ms. The headless test browser itself reports few CPU cores, so it
+  runs lite by default; the glass is verified by forcing full motion
+  (`localStorage 'universe-motion' = 'full'`), exactly as the perf audit
+  does with `MOTION=full`.
+- **Perf (6x CPU, `work/perf-audit.mjs`).** Typing + 5 sends: p95 36.3 ms
+  in full mode (phase 3: 31.6 ms), max 61 ms, 3 frames over 50 ms per 5
+  sends; lite mode p95 31.8 ms, 1 frame over 50 ms. The glass costs a
+  couple of briefly-long frames on a severely throttled device — one per
+  send at most — and is imperceptible on real hardware. A/B without the
+  border-radius wobble recovered ~2 ms of p95; the wobble was kept because
+  it is the liquid part of the look and the cost is inside run-to-run
+  variance. No new animation loops, no per-frame JS listeners; WAAPI only.
+- **Tests.** New check in `tests/native-motion-browser.mjs`: the droplet
+  spawns at the send button's centre, travels upward, is removed from the
+  DOM, the message settles at opacity 1 / transform none; gentle mode
+  shows the simplified droplet with `backdrop-filter: none`; reduced
+  motion shows no droplet and the message still sends. `work/send-bubble-check.mjs`
+  repeats the lifecycle with frame screenshots in
+  `work/send-bubble-frames/` (full-motion glass forced on) and
+  `work/droplet-probe.mjs` captures frozen mid-flight clips with computed
+  styles. Two Supabase RPC 404s in the fixture console
+  (`anniversary_2026_status`, `project28_config`) are pre-existing noise,
+  verified identical on the pristine checkout. Initial bundle is 23.9 KiB
+  gzip, still under the 25,000-byte budget.
+
 ## Chrome guidance follow-up (November 13, 2026)
 
 Installed and verified `modern-web-guidance@googlechrome` 1.0.0 in the Codex environment, and applied its `motion` guide alongside the existing Motion skill. Research used Chrome's viewport and VirtualKeyboard documentation and its compositor-animation guidance. Browser geometry can arrive in a single step; the website cannot force the Android IME itself to slide or guarantee synchronized per-frame OS insets. Physical-device verification remains necessary.

@@ -507,7 +507,14 @@ function updateMessages(force){
    if(node===cursor)cursor=cursor.nextSibling;
    else el.insertBefore(node,cursor);
    // A template node has an inactive animation timeline until it joins the page.
-   if(animate)chatView.enterMessage(node.querySelector('.message-main'),cascade++*30);
+   // The droplet delays only the bounce, never the visibility: these keyframes
+   // carry no opacity, so the message is painted from the first frame and the
+   // bounce lands as the droplet arrives. One single animate call — a
+   // cancel-and-reanimate would count as a second entrance.
+   if(animate){
+    const last=S.messages[S.messages.length-1],isBubble=last&&last.pending&&last.sender===S.user.id&&item.key==='message-'+last.id,delay=isBubble?(chatView.bubbleEntranceDelay?.()||cascade++*30):cascade++*30;
+    chatView.enterMessage(node.querySelector('.message-main'),delay);
+   }
   }
   while(cursor){const next=cursor.nextSibling;cursor.remove();cursor=next}
   if(near&&!S.older)scrollBottom();else el.scrollTop=top;
@@ -557,6 +564,7 @@ async function send() {
   chatView.fitComposer(input);
   S.reply = null;
   $("#reply-container").innerHTML = "";
+  chatView?.sendBubble?.(input.form?.querySelector(".send"));
   updateMessages(true);
   const sending=transmit(m);
   if(wasOlder)showLatest().catch(()=>{if(epoch===sessionEpoch)toast('Your message is sending. Earlier messages will reload when the connection recovers.')});
