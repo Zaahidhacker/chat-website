@@ -176,18 +176,24 @@ element, never a loop, and it costs the cold login nothing.
   class="send-droplet" aria-hidden="true">` with an inner `<i>` for the
   glass, centred exactly on the send button (position from CSS custom
   properties `--drop-x`/`--drop-y`, so the spawn point is deterministic and
-  testable). The outer shell flies ~500 ms along a slight leftward arc to
-  where the new own bubble lands (bottom-right of `#messages`), on
-  transform/opacity only; the inner glass morphs — scale spring (0.7 →
-  1.28 → 1.05 → 0.55) plus a border-radius wobble — on linear easing, so
-  the blob shape is actually visible mid-flight. The glass itself is a
-  radial highlight, a bright 1.5 px rim, inset top light, a faint pink
-  halo and `backdrop-filter: blur(6px) saturate(1.8)` on the 40 px droplet
-  only. The message entrance is delayed to the droplet's arrival
-  (`bubbleEntranceDelay()`, ~320 ms) — see the merge note below for how
-  that delay works now: it holds back only the bounce, never the message
-  itself. At most 3 droplets fly at once; further sends fall back to the
-  normal cascade entrance.
+  testable). The outer shell flies 580 ms along one smooth quadratic
+  Bezier arc to where the new own bubble lands (bottom-right of
+  `#messages`), sampled at 15 points with ease-out time so it launches
+  fast and settles soft, with no kink or direction reversal; opacity
+  fades in/out with smoothsteps, and the shell is `translate3d` only
+  with `will-change: transform, opacity`. The inner glass morphs with
+  squash-and-stretch (stretches tall mid-flight, squashes as it lands,
+  shrinks to .48 as it dissolves) plus a border-radius wobble, each
+  segment eased, so the blob shape is actually visible mid-flight. The
+  glass itself is a radial highlight, a bright 1.5 px rim, inset top
+  light, a faint pink halo and `backdrop-filter: blur(5px) saturate(1.7)`
+  on the 40 px droplet only; the specular highlight is a gradient, not
+  a blurred layer, and the shadow stack was trimmed, so the paint cost
+  is lower than the first version. The message entrance is delayed to
+  the droplet's arrival (`bubbleEntranceDelay()`, ~440 ms) — see the
+  merge note below for how that delay works now: it holds back only the
+  bounce, never the message itself. At most 3 droplets fly at once;
+  further sends fall back to the normal cascade entrance.
 - **Merge with the user's send-bounce fix (`a35a4f0`, November 21, 2026).**
   Zaahid pushed his own commit restoring the send bounce: `enterMessage(el,
   delay)` with transform-only bounce keyframes (full: 8px scale(.96) →
@@ -218,19 +224,20 @@ element, never a loop, and it costs the cold login nothing.
 - **Reduced motion:** no droplet at all; the message appears instantly, as
   before (plus a `.send-droplet{display:none}` kill-switch in CSS).
   **Gentle mode (`data-motion=lite`):** a plain translucent circle, no
-  backdrop blur, no highlight, no morph — opacity + scale + travel only,
-  420 ms. The headless test browser itself reports few CPU cores, so it
+  backdrop blur, no highlight, no morph — opacity + travel only, on the
+  same smooth sampled arc, 460 ms. The headless test browser itself reports few CPU cores, so it
   runs lite by default; the glass is verified by forcing full motion
   (`localStorage 'universe-motion' = 'full'`), exactly as the perf audit
   does with `MOTION=full`.
-- **Perf (6x CPU, `work/perf-audit.mjs`).** Typing + 5 sends: p95 36.3 ms
-  in full mode (phase 3: 31.6 ms), max 61 ms, 3 frames over 50 ms per 5
-  sends; lite mode p95 31.8 ms, 1 frame over 50 ms. The glass costs a
-  couple of briefly-long frames on a severely throttled device — one per
-  send at most — and is imperceptible on real hardware. A/B without the
-  border-radius wobble recovered ~2 ms of p95; the wobble was kept because
-  it is the liquid part of the look and the cost is inside run-to-run
-  variance. No new animation loops, no per-frame JS listeners; WAAPI only.
+- **Perf (6x CPU, `work/perf-audit.mjs`).** Typing + 5 sends: p95 33.9 ms
+  in full mode, max 53.3 ms, 2 frames over 50 ms per 5 sends — smoother
+  than the first droplet (p95 36.3 ms, max 61 ms, 3 frames over 50 ms),
+  because the shell is `translate3d` only with `will-change`, the
+  highlight no longer pays for a blurred layer, and the shadow stack was
+  trimmed. Lite mode was 31.8 ms before; the same arc is used there now.
+  No new animation loops, no per-frame JS listeners; WAAPI only. The
+  smoother flight is 580 ms (lite 460 ms) with the bounce landing
+  ~440 ms after send; the message itself is still painted instantly.
 - **Tests.** New check in `tests/native-motion-browser.mjs`: the droplet
   spawns at the send button's centre, travels upward, is removed from the
   DOM, the message settles at opacity 1 / transform none; gentle mode

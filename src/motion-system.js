@@ -31,10 +31,15 @@ export function enterMessage(el,delay=0){
 export function sendPulse(el){return move(el,[{transform:'scale(.8) rotate(-10deg)'},{transform:'none'}],{duration:140})}
 // Send droplet: one liquid-glass bubble that leaves the send button and
 // dissolves into the new message as it pops in. The travelling shell animates
-// transform/opacity only; the glass morph (scale + border-radius wobble) lives
-// on the inner element so the two never fight. The droplet is removed on
-// finish, on cancel, on hide and on sign-out, so it never outlives its
-// ~500 ms flight — a failed send can never leave one behind.
+// transform/opacity only; the glass morph (squash-and-stretch + border-radius
+// wobble) lives on the inner element so the two never fight. The droplet is
+// removed on finish, on cancel, on hide and on sign-out, so it never outlives
+// its flight — a failed send can never leave one behind.
+// Smoothness: the flight is one quadratic Bezier arc sampled at 15 points
+// with ease-out time, so it launches fast and settles soft with no kink,
+// no direction reversal and no sudden speed change. Opacity fades in/out
+// with smoothsteps instead of snapping, and the shell uses translate3d
+// (compositor only) with will-change in CSS.
 const droplets=new Set();
 let bubbleArrival=0;
 export function bubbleEntranceDelay(){return Math.max(0,bubbleArrival-performance.now())}
@@ -52,21 +57,21 @@ export function sendBubble(from){
  el.style.setProperty('--drop-y',(sy-size/2)+'px');
  const glass=document.createElement('i');el.append(glass);
  document.body.append(el);droplets.add(el);
- const flight=lite?420:500;
- bubbleArrival=performance.now()+flight-180;
- const travel=el.animate([
-  {transform:'translate(0px,0px)',opacity:0,offset:0},
-  {transform:`translate(${Math.round(dx*-0.18)}px,${Math.round(dy*0.35)}px)`,opacity:1,offset:.12},
-  {transform:`translate(${Math.round(dx*-0.34)}px,${Math.round(dy*0.68)}px)`,opacity:1,offset:.55},
-  {transform:`translate(${Math.round(dx*0.85)}px,${Math.round(dy*0.92)}px)`,opacity:1,offset:.8},
-  {transform:`translate(${Math.round(dx)}px,${Math.round(dy)}px)`,opacity:0,offset:1},
- ],{duration:flight,easing:ease,fill:'forwards'});
+ const flight=lite?460:580;
+ bubbleArrival=performance.now()+flight-140;
+ const cx=dx*.32,cy=dy*.55-72,ss=u=>u*u*(3-2*u),frames=[];
+ for(let i=0;i<=14;i++){const u=i/14,p=1-Math.pow(1-u,3),q=1-p;
+  const o=u<.1?ss(u/.1):u>.84?1-ss((u-.84)/.16):1;
+  frames.push({transform:`translate3d(${(2*q*p*cx+p*p*dx).toFixed(1)}px,${(2*q*p*cy+p*p*dy).toFixed(1)}px,0)`,opacity:+o.toFixed(3),offset:u})}
+ const travel=el.animate(frames,{duration:flight,easing:'linear',fill:'forwards'});
  let morph=null;
  if(!lite)morph=glass.animate([
-  {transform:'scale(.7)',borderRadius:'50%',offset:0},
-  {transform:'scale(1.28)',borderRadius:'46% 54% 58% 42% / 52% 44% 56% 48%',offset:.35},
-  {transform:'scale(1.05)',borderRadius:'54% 46% 44% 56% / 46% 56% 48% 54%',offset:.7},
-  {transform:'scale(.55)',borderRadius:'50%',offset:1},
+  {transform:'scale(.68)',borderRadius:'50%',offset:0,easing:'cubic-bezier(.22,1,.36,1)'},
+  {transform:'scale(.95,1.22)',borderRadius:'47% 53% 57% 43% / 53% 45% 55% 47%',offset:.22,easing:'cubic-bezier(.22,1,.36,1)'},
+  {transform:'scale(1.24,1.02)',borderRadius:'54% 46% 44% 56% / 46% 56% 48% 54%',offset:.45,easing:'cubic-bezier(.22,1,.36,1)'},
+  {transform:'scale(1.08,.96)',borderRadius:'48% 52% 55% 45% / 52% 48% 54% 46%',offset:.68,easing:'cubic-bezier(.22,1,.36,1)'},
+  {transform:'scale(.92,.78)',borderRadius:'50%',offset:.86,easing:'cubic-bezier(.22,1,.36,1)'},
+  {transform:'scale(.48)',borderRadius:'50%',offset:1},
  ],{duration:flight,easing:'linear',fill:'forwards'});
  const done=()=>{travel.cancel();morph?.cancel();el.remove();droplets.delete(el)};
  travel.finished.catch(()=>{}).finally(done);
