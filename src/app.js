@@ -507,13 +507,19 @@ function updateMessages(force){
    if(node===cursor)cursor=cursor.nextSibling;
    else el.insertBefore(node,cursor);
    // A template node has an inactive animation timeline until it joins the page.
-   // The droplet delays only the bounce, never the visibility: these keyframes
-   // carry no opacity, so the message is painted from the first frame and the
-   // bounce lands as the droplet arrives. One single animate call — a
-   // cancel-and-reanimate would count as a second entrance.
+   // The send morph is a FLIP: the list is pinned synchronously first so
+   // the final rect is measured after the scroll (not before it), and the
+   // button rect is read inside enterMessage in the same synchronous block
+   // as the final rect, so both belong to the same layout even if the
+   // keyboard dismisses mid-send. The message itself animates from the
+   // button to its final place in one animate call — no opacity, so the
+   // message is painted from the first frame, and no wall-clock delay, so a
+   // keyboard/viewport shift mid-flight moves the message and its animation
+   // together instead of stranding a fixed overlay.
    if(animate){
-    const last=S.messages[S.messages.length-1],isBubble=last&&last.pending&&last.sender===S.user.id&&item.key==='message-'+last.id,delay=isBubble?(chatView.bubbleEntranceDelay?.()||cascade++*30):cascade++*30;
-    chatView.enterMessage(node.querySelector('.message-main'),delay);
+    const last=S.messages[S.messages.length-1],isBubble=last&&last.pending&&last.sender===S.user.id&&item.key==='message-'+last.id;
+    if(isBubble&&near&&!S.older)el.scrollTop=el.scrollHeight;
+    chatView.enterMessage(node.querySelector('.message-main'),isBubble?0:cascade++*30,isBubble);
    }
   }
   while(cursor){const next=cursor.nextSibling;cursor.remove();cursor=next}
@@ -564,7 +570,6 @@ async function send() {
   chatView.fitComposer(input);
   S.reply = null;
   $("#reply-container").innerHTML = "";
-  chatView?.sendBubble?.(input.form?.querySelector(".send"));
   updateMessages(true);
   const sending=transmit(m);
   if(wasOlder)showLatest().catch(()=>{if(epoch===sessionEpoch)toast('Your message is sending. Earlier messages will reload when the connection recovers.')});

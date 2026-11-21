@@ -57,22 +57,22 @@
 @keyframes nav-unread-in{from{opacity:0;transform:scale(.9)}}
 /* The send button fills with accent only once there is something to send. */
 .composer .send[data-has-text]{background:var(--accent);color:var(--bg)}
-/* Send droplet: one liquid-glass bubble that leaves the send button and
-   dissolves into the new message. Fixed, pointer-transparent, removed on
-   finish; the travelling shell is transform/opacity only and the glass morph
-   (scale + border-radius wobble) runs on the inner element. */
-.send-droplet{position:fixed;left:var(--drop-x,0);top:var(--drop-y,0);width:40px;height:40px;pointer-events:none;z-index:60;will-change:transform,opacity;contain:layout style;transform:translateZ(0)}
-.send-droplet i{position:relative;display:block;width:100%;height:100%;border-radius:50%;will-change:transform,border-radius;
- background:radial-gradient(circle at 32% 28%,rgba(255,255,255,.85),rgba(255,255,255,.28) 38%,rgba(255,183,207,.22) 62%,rgba(255,255,255,.10) 78%);
- border:1.5px solid rgba(255,255,255,.85);
- box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -3px 6px rgba(255,255,255,.22),0 0 20px rgba(255,183,207,.4),0 4px 12px rgba(20,10,20,.22);
- backdrop-filter:blur(5px) saturate(1.7);-webkit-backdrop-filter:blur(5px) saturate(1.7)}
-.send-droplet i::after{content:"";position:absolute;left:14%;top:9%;width:46%;height:32%;border-radius:50%;background:radial-gradient(ellipse at center,rgba(255,255,255,.95),rgba(255,255,255,0) 72%);transform:rotate(-18deg)}
-/* Gentle motion: no backdrop blur, no specular highlight, no morph — the
-   droplet is a plain translucent circle that still travels and fades. */
-[data-motion=lite] .send-droplet i{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(255,255,255,.30);border:1.5px solid rgba(255,255,255,.6);box-shadow:0 0 12px rgba(255,183,207,.22),0 2px 8px rgba(20,10,20,.18)}
-[data-motion=lite] .send-droplet i::after{display:none}
-@media(prefers-reduced-motion:reduce){.send-droplet{display:none}}
+/* Send morph: the message itself is the bubble. While .morphing is on the
+   message, its border-radius is animated by the single entrance (50% blob
+   to the bubble's own radius) and overflow clips it to that shape; the
+   ::after is the liquid-glass skin — glossy highlight, bright rim and a
+   backdrop blur that fades away as the morph settles (.morph-settling).
+   The class comes off when the animation finishes, so the settled bubble
+   is exactly the baseline. */
+.message-main.morphing{position:relative;overflow:hidden;will-change:transform,border-radius}
+.message-main.morphing::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+ background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.85),rgba(255,255,255,.22) 42%,rgba(255,183,207,.16) 68%,rgba(255,255,255,.05) 82%);
+ box-shadow:inset 0 1px 1px rgba(255,255,255,.8),inset 0 -2px 5px rgba(255,255,255,.22),inset 0 0 0 1.5px rgba(255,255,255,.75),0 0 18px rgba(255,183,207,.35);
+ backdrop-filter:blur(4px) saturate(1.6);-webkit-backdrop-filter:blur(4px) saturate(1.6);
+ transition:opacity .16s ease}
+.message-main.morph-settling::after{opacity:0}
+/* Gentle motion: same morph, no backdrop blur. */
+[data-motion=lite] .message-main.morphing::after{backdrop-filter:none;-webkit-backdrop-filter:none}
 @starting-style{.content-page .note,.content-page .setting-row{opacity:0;transform:translateY(6px)}}
 .content-page .note,.content-page .setting-row{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 /* Phase 3 performance: each message paints and lays out on its own, so

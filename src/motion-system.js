@@ -21,62 +21,62 @@ export function release(el,from,velocity=0){
  stopMotion(el);el.style.removeProperty('transform');if(reducedMotion())return;
  const path=springSamples(from,velocity);return move(el,path.map(x=>({transform:`translateX(${x}px)`})),{duration:(path.length-1)/120*1000,easing:'linear'});
 }
-export function enterMessage(el,delay=0){
+export function enterMessage(el,delay=0,flip=false){
+ if(!el?.isConnected)return Promise.resolve();
  const gentle=liteMotion();
+ if(reducedMotion()||!flip){
+  const frames=gentle
+   ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
+   :[{transform:'translateY(8px) scale(.96)'},{offset:.58,transform:'translateY(-3px) scale(1.025)'},{transform:'none'}];
+  return move(el,frames,{duration:gentle?160:230,delay});
+ }
+ // FLIP send morph: the message itself travels from the send button and
+ // grows from a small liquid-glass blob into its final bubble. This must
+ // stay ONE animate() call on .message-main — the bounce test counts
+ // animate() calls there, so travel, squash and border-radius all live in
+ // these keyframes; the glass skin is a CSS class (.morphing), never a
+ // second animation. Every keyframe carries a transform (the test reads
+ // them), none carries opacity (the message is painted from frame 0),
+ // and there is no wall-clock delay. Because the transform lives on the
+ // element, a keyboard/viewport shift moves the message and its animation
+ // together instead of stranding a fixed overlay.
+ // The button rect is read HERE, in the same synchronous block as the
+ // final rect — never captured earlier. The keyboard can dismiss between
+ // send() and this frame, and a rect captured at send time would belong
+ // to the old layout: in the harness that put the morph 248px too high.
+ const btn=document.querySelector('.composer .send')?.getBoundingClientRect();
+ const bubble=el.querySelector('.bubble'),er=el.getBoundingClientRect(),br=bubble?.getBoundingClientRect();
+ const origin=btn&&btn.width?{x:btn.left+btn.width/2,y:btn.top+btn.height/2,size:Math.min(btn.width,btn.height)}:null;
+ if(!br||!br.width||!br.height||!origin?.size){
+  const plain=gentle
+   ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
+   :[{transform:'translateY(8px) scale(.96)'},{offset:.58,transform:'translateY(-3px) scale(1.025)'},{transform:'none'}];
+  return move(el,plain,{duration:gentle?160:230,delay});
+ }
+ const cx=br.left+br.width/2,cy=br.top+br.height/2;
+ const sx=+Math.max(.06,Math.min(.9,origin.size/br.width)).toFixed(3),sy=+Math.max(.06,Math.min(.9,origin.size/br.height)).toFixed(3);
+ const dx=Math.round(origin.x-cx),dy=Math.round(origin.y-cy);
+ const mx=+(sx+(1-sx)*.55).toFixed(3),my=+(sy+(1-sy)*.55).toFixed(3);
+ const tx=Math.round(dx*.42),ty=Math.round(dy*.42)-26,R='18px 18px 5px 18px',out='cubic-bezier(.22,1,.36,1)';
  const frames=gentle
-  ?[{transform:'translateY(4px)'},{offset:.58,transform:'translateY(-1px)'},{transform:'none'}]
-  :[{transform:'translateY(8px) scale(.96)'},{offset:.58,transform:'translateY(-3px) scale(1.025)'},{transform:'none'}];
- return move(el,frames,{duration:gentle?160:230,delay});
+  ?[{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,borderRadius:'50%',offset:0,easing:out},
+    {transform:'translate(0px,2px) scale(1.01)',borderRadius:R,offset:.62,easing:out},
+    {transform:'translateY(-1px)',borderRadius:R,offset:.82},
+    {transform:'none',borderRadius:R,offset:1}]
+  :[{transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,borderRadius:'50%',offset:0,easing:out},
+    {transform:`translate(${tx}px,${ty}px) scale(${mx},${my})`,borderRadius:'42% 58% 55% 45% / 55% 45% 58% 42%',offset:.38,easing:out},
+    {transform:'translate(0px,3px) scale(1.015)',borderRadius:R,offset:.68,easing:'cubic-bezier(.3,1.25,.4,1)'},
+    {transform:'translateY(-3px) scale(1.025)',borderRadius:R,offset:.84,easing:out},
+    {transform:'none',borderRadius:R,offset:1}];
+ el.style.transformOrigin=(cx-er.left).toFixed(1)+'px '+(cy-er.top).toFixed(1)+'px';
+ el.classList.add('morphing');
+ return move(el,frames,{duration:gentle?220:300,easing:'linear',delay}).finally(()=>{
+  // Let the glass skin fade out before the class comes off.
+  el.classList.add('morph-settling');
+  setTimeout(()=>{el.classList.remove('morphing','morph-settling');el.style.removeProperty('transform-origin')},170);
+ });
 }
 export function sendPulse(el){return move(el,[{transform:'scale(.8) rotate(-10deg)'},{transform:'none'}],{duration:140})}
-// Send droplet: one liquid-glass bubble that leaves the send button and
-// dissolves into the new message as it pops in. The travelling shell animates
-// transform/opacity only; the glass morph (squash-and-stretch + border-radius
-// wobble) lives on the inner element so the two never fight. The droplet is
-// removed on finish, on cancel, on hide and on sign-out, so it never outlives
-// its flight — a failed send can never leave one behind.
-// Smoothness: the flight is one quadratic Bezier arc sampled at 15 points
-// with ease-out time, so it launches fast and settles soft with no kink,
-// no direction reversal and no sudden speed change. Opacity fades in/out
-// with smoothsteps instead of snapping, and the shell uses translate3d
-// (compositor only) with will-change in CSS.
-const droplets=new Set();
-let bubbleArrival=0;
-export function bubbleEntranceDelay(){return Math.max(0,bubbleArrival-performance.now())}
-export function sendBubble(from){
- if(reducedMotion()||!from?.animate)return;
- const list=document.querySelector('#messages'),btn=from.getBoundingClientRect();
- if(!btn.width||!list||droplets.size>=3)return;
- const lite=liteMotion(),r=list.getBoundingClientRect(),size=40;
- const sx=btn.left+btn.width/2,sy=btn.top+btn.height/2;
- const dx=r.right-52-sx,dy=r.bottom-40-sy;
- const el=document.createElement('div');
- el.className='send-droplet'+(lite?' send-droplet--lite':'');
- el.setAttribute('aria-hidden','true');
- el.style.setProperty('--drop-x',(sx-size/2)+'px');
- el.style.setProperty('--drop-y',(sy-size/2)+'px');
- const glass=document.createElement('i');el.append(glass);
- document.body.append(el);droplets.add(el);
- const flight=lite?460:580;
- bubbleArrival=performance.now()+flight-140;
- const cx=dx*.32,cy=dy*.55-72,ss=u=>u*u*(3-2*u),frames=[];
- for(let i=0;i<=14;i++){const u=i/14,p=1-Math.pow(1-u,3),q=1-p;
-  const o=u<.1?ss(u/.1):u>.84?1-ss((u-.84)/.16):1;
-  frames.push({transform:`translate3d(${(2*q*p*cx+p*p*dx).toFixed(1)}px,${(2*q*p*cy+p*p*dy).toFixed(1)}px,0)`,opacity:+o.toFixed(3),offset:u})}
- const travel=el.animate(frames,{duration:flight,easing:'linear',fill:'forwards'});
- let morph=null;
- if(!lite)morph=glass.animate([
-  {transform:'scale(.68)',borderRadius:'50%',offset:0,easing:'cubic-bezier(.22,1,.36,1)'},
-  {transform:'scale(.95,1.22)',borderRadius:'47% 53% 57% 43% / 53% 45% 55% 47%',offset:.22,easing:'cubic-bezier(.22,1,.36,1)'},
-  {transform:'scale(1.24,1.02)',borderRadius:'54% 46% 44% 56% / 46% 56% 48% 54%',offset:.45,easing:'cubic-bezier(.22,1,.36,1)'},
-  {transform:'scale(1.08,.96)',borderRadius:'48% 52% 55% 45% / 52% 48% 54% 46%',offset:.68,easing:'cubic-bezier(.22,1,.36,1)'},
-  {transform:'scale(.92,.78)',borderRadius:'50%',offset:.86,easing:'cubic-bezier(.22,1,.36,1)'},
-  {transform:'scale(.48)',borderRadius:'50%',offset:1},
- ],{duration:flight,easing:'linear',fill:'forwards'});
- const done=()=>{travel.cancel();morph?.cancel();el.remove();droplets.delete(el)};
- travel.finished.catch(()=>{}).finally(done);
-}
-function clearDroplets(){for(const el of droplets){el.getAnimations().forEach(a=>a.cancel());el.remove()}droplets.clear();bubbleArrival=0}
 export function enterPanel(el){clearExitLayers();return move(el,[{opacity:.6,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:timing.panel})}
 export function exitPanel(el){return move(el,[{opacity:1,transform:'none'},{opacity:0,transform:'translateY(6px)'}],{duration:130,fill:'forwards'})}
 function clear(){for(const [el]of active)stopMotion(el)}
@@ -93,5 +93,5 @@ export function exitOverlay(overlay){
  exitPanel(panel).finally(()=>{ghost.remove();ghosts.delete(ghost)});
 }
 export function clearExitLayers(){for(const ghost of ghosts){stopMotion(ghost);const panel=ghost.querySelector('.modal');if(panel)stopMotion(panel);ghost.remove()}ghosts.clear()}
-export function clearMotion(){clear();clearExitLayers();clearDroplets()}
+export function clearMotion(){clear();clearExitLayers();for(const el of document.querySelectorAll('.message-main.morphing'))el.classList.remove('morphing','morph-settling')}
 reduced.addEventListener('change',()=>{if(reduced.matches)clearMotion()});document.addEventListener('visibilitychange',()=>{if(document.hidden)clearMotion()});

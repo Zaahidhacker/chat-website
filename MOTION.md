@@ -163,93 +163,109 @@ down, and makes the moment feel like the rest of the site:
   it back — the taste suite serves `index.html` under the real CSP and
   asserts zero violations.
 
-## Send droplet — a liquid-glass bubble (November 21, 2026)
+## Send morph — the message itself becomes a liquid-glass bubble (November 21, 2026)
 
-Zaahid asked for the send to feel like iOS 26 liquid glass: a water bubble
-that leaves the send button and becomes the message. It is one transient
-element, never a loop, and it costs the cold login nothing.
+Zaahid asked for the send to feel like iOS 26 liquid glass — but with the
+message ITSELF transforming into the bubble, no separate droplet flying
+over it, and much faster, with no noticeable delay. This replaces the
+send droplet (removed entirely: `sendBubble`, `bubbleEntranceDelay`,
+`captureSendOrigin`/`takeSendOrigin`, `.send-droplet` and its CSS are
+gone; nothing in `src/` references a droplet any more).
 
-- **How it works.** `send()` in `app.js` (the single send path — the send
-  button's form submit and the Enter key both go through it) calls
-  `chatView.sendBubble(button)` right before `updateMessages(true)`.
-  `sendBubble` in `motion-system.js` spawns one fixed `<div
-  class="send-droplet" aria-hidden="true">` with an inner `<i>` for the
-  glass, centred exactly on the send button (position from CSS custom
-  properties `--drop-x`/`--drop-y`, so the spawn point is deterministic and
-  testable). The outer shell flies 580 ms along one smooth quadratic
-  Bezier arc to where the new own bubble lands (bottom-right of
-  `#messages`), sampled at 15 points with ease-out time so it launches
-  fast and settles soft, with no kink or direction reversal; opacity
-  fades in/out with smoothsteps, and the shell is `translate3d` only
-  with `will-change: transform, opacity`. The inner glass morphs with
-  squash-and-stretch (stretches tall mid-flight, squashes as it lands,
-  shrinks to .48 as it dissolves) plus a border-radius wobble, each
-  segment eased, so the blob shape is actually visible mid-flight. The
-  glass itself is a radial highlight, a bright 1.5 px rim, inset top
-  light, a faint pink halo and `backdrop-filter: blur(5px) saturate(1.7)`
-  on the 40 px droplet only; the specular highlight is a gradient, not
-  a blurred layer, and the shadow stack was trimmed, so the paint cost
-  is lower than the first version. The message entrance is delayed to
-  the droplet's arrival (`bubbleEntranceDelay()`, ~440 ms) — see the
-  merge note below for how that delay works now: it holds back only the
-  bounce, never the message itself. At most 3 droplets fly at once;
-  further sends fall back to the normal cascade entrance.
-- **Merge with the user's send-bounce fix (`a35a4f0`, November 21, 2026).**
-  Zaahid pushed his own commit restoring the send bounce: `enterMessage(el,
-  delay)` with transform-only bounce keyframes (full: 8px scale(.96) →
-  -3px scale(1.025) overshoot → none, 230 ms; gentle: 4px → -1px, 160 ms),
-  `move()` guards (`el?.isConnected`, try/catch around `el.animate`), the
-  entrance called only after `insertBefore` (a template node has an
-  inactive timeline until it joins the page), pending/failed taken out of
-  `messageSignature` so an acknowledgement never re-renders the bubble,
-  and `updateReceipts` toggling `pending`/`failed` classes on the row
-  instead. All three files merged in as-is (`tests/browser.mjs` is his
-  file byte for byte; his bounce test pins exactly one entrance per
-  message, on the live document timeline, with the -3px overshoot, the
-  optimistic text painted while the send RPC is held, and the bubble
-  retained after acknowledgement). The droplet adapted to his bounce: the
-  delay from `bubbleEntranceDelay()` is passed as the `delay` argument of
-  his single `enterMessage` call — his keyframes carry no opacity and no
-  fill, so during the delay the message sits painted at opacity 1 and
-  only the bounce waits for the droplet. No hiding, no
-  cancel-and-reanimate (that would count as a second entrance and fail
-  his test). The droplet itself is unchanged: same spawn, flight, morph,
-  cleanup, gentle/reduced behaviour.
-- **Cleanup.** The droplet is removed when its travel animation finishes,
-  when it is cancelled, on tab hide and on sign-out (`clearDroplets`,
-  called from `clearMotion`). Removal is time-based, never network-based,
-  so a failed send can never leave one behind — the existing failed-message
-  nudge still applies. Nothing about send logic, auth, schema or
-  persistence changed.
-- **Reduced motion:** no droplet at all; the message appears instantly, as
-  before (plus a `.send-droplet{display:none}` kill-switch in CSS).
-  **Gentle mode (`data-motion=lite`):** a plain translucent circle, no
-  backdrop blur, no highlight, no morph — opacity + travel only, on the
-  same smooth sampled arc, 460 ms. The headless test browser itself reports few CPU cores, so it
-  runs lite by default; the glass is verified by forcing full motion
-  (`localStorage 'universe-motion' = 'full'`), exactly as the perf audit
-  does with `MOTION=full`.
-- **Perf (6x CPU, `work/perf-audit.mjs`).** Typing + 5 sends: p95 33.9 ms
-  in full mode, max 53.3 ms, 2 frames over 50 ms per 5 sends — smoother
-  than the first droplet (p95 36.3 ms, max 61 ms, 3 frames over 50 ms),
-  because the shell is `translate3d` only with `will-change`, the
-  highlight no longer pays for a blurred layer, and the shadow stack was
-  trimmed. Lite mode was 31.8 ms before; the same arc is used there now.
-  No new animation loops, no per-frame JS listeners; WAAPI only. The
-  smoother flight is 580 ms (lite 460 ms) with the bounce landing
-  ~440 ms after send; the message itself is still painted instantly.
-- **Tests.** New check in `tests/native-motion-browser.mjs`: the droplet
-  spawns at the send button's centre, travels upward, is removed from the
-  DOM, the message settles at opacity 1 / transform none; gentle mode
-  shows the simplified droplet with `backdrop-filter: none`; reduced
-  motion shows no droplet and the message still sends. `work/send-bubble-check.mjs`
-  repeats the lifecycle with frame screenshots in
-  `work/send-bubble-frames/` (full-motion glass forced on) and
-  `work/droplet-probe.mjs` captures frozen mid-flight clips with computed
-  styles. Two Supabase RPC 404s in the fixture console
-  (`anniversary_2026_status`, `project28_config`) are pre-existing noise,
-  verified identical on the pristine checkout. Initial bundle is 23.9 KiB
-  gzip, still under the 25,000-byte budget.
+- **The keyboard bug that forced the redesign.** With the keyboard open,
+  tapping send dismissed it, the `visualViewport` grew, `#messages`
+  grew taller and the list re-pinned — so the message's real landing
+  spot moved DOWN ~330–370 px mid-flight. The droplet, however, was a
+  `position:fixed` overlay whose target had been computed once, from
+  pre-insert geometry, so it kept flying to the old, too-high spot.
+  Reproduced in the harness (`work/keyboard-probe.mjs`, since removed):
+  keyboard-open send, droplet centre (360, 329) vs bubble centre
+  (300, 660) — the droplet landed 331 px above the bubble, while the
+  message's own final centre was y≈663 in both cases. The message
+  itself always landed correctly; only the fixed overlay was stranded.
+  The 440 ms bounce delay (`bubbleArrival = now + flight - 140`) made
+  it worse, because the keyboard had time to dismiss under the delayed
+  entrance.
+- **How the morph works (FLIP).** `send()` in `app.js` is the single
+  send path (button submit and Enter both go through it). `updateMessages`
+  inserts the new own message, pins the list synchronously
+  (`el.scrollTop = el.scrollHeight`) so the bubble is at its final
+  scroll position, then calls `enterMessage(main, 0, true)`. Inside
+  `enterMessage` (`motion-system.js`), in the same synchronous block,
+  the send button's rect AND the bubble's final rect are read together
+  — the button rect is deliberately read here, never captured at send
+  time, because the keyboard can dismiss between `send()` and this
+  frame; in the harness that race put a send-time capture 248 px too
+  high (button still at its keyboard-open spot, bubble already in the
+  dismissed layout). Reading both rects in one block makes them share
+  one layout, and because the transform lives on the element, a
+  keyboard/viewport shift afterwards moves the message and its
+  animation together. The FLIP: `transform-origin` is set to the
+  bubble's centre relative to `.message-main`; the first keyframe is
+  `translate(dx, dy) scale(sx, sy)` (button centre minus bubble centre,
+  scale clamped to [.06, .9], border-radius `50%`), so the message
+  starts as a small round glass blob exactly on the send button; a
+  mid-flight blob keyframe interpolates scale 55% toward 1 with a
+  -26 px arc lift and a wobbling border-radius
+  (`42% 58% 55% 45% / 55% 45% 58% 42%`); then it settles through the
+  -3 px overshoot into `none` with the own-bubble radius
+  `18px 18px 5px 18px`. Full: 300 ms, overall easing linear with
+  per-keyframe `cubic-bezier(.22,1,.36,1)` and a
+  `cubic-bezier(.3,1.25,.4,1)` overshoot segment; gentle
+  (`data-motion=lite`): 220 ms, no blob wobble, -1 px overshoot, no
+  backdrop blur. The glass is a CSS class only (`.message-main.morphing`,
+  `src/native-motion.css`): `overflow:hidden` clips the bubble to the
+  animating radius, and a `::after` overlay carries the radial glossy
+  highlight, bright 1.5 px rim, inset top light, pink halo and
+  `backdrop-filter: blur(4px) saturate(1.6)`; after the animation
+  finishes the class flips to `.morph-settling` and the overlay fades
+  over 160 ms, the class coming off 170 ms later (total visual settle
+  ~470 ms) — the text is frosted during the flight and crisp once
+  settled. No wall-clock delay, no opacity keyframes: the message is
+  painted from frame 0.
+- **Zaahid's bounce test still passes, unchanged.** The morph IS the
+  one `enterMessage` `animate()` call on `.message-main` — travel,
+  squash and border-radius all live in those keyframes, and the glass
+  is a class, not a second animation. Every keyframe carries a
+  transform, none carries opacity, and the -3 px overshoot keyframe is
+  kept, so `tests/browser.mjs` (his file, byte for byte) still sees
+  exactly one live-timeline entrance per message, the optimistic text
+  painted while the send RPC is held, and the bubble retained after
+  acknowledgement (18/18 in `npm run test:browser`).
+- **Reduced motion:** no morph, the message appears instantly, as
+  before. **Gentle mode:** simplified morph, no backdrop blur. If the
+  button rect is missing or the bubble rect is zero, the old bounce
+  frames run instead. The headless test browser reports few CPU cores,
+  so it runs lite by default; the glass is verified by forcing full
+  motion (`localStorage 'universe-motion' = 'full'`), exactly as the
+  perf audit does with `MOTION=full`.
+- **Perf (6x CPU, `work/perf-audit.mjs`).** Typing + 5 sends: p95
+  32.9 ms in full mode, max 60.1 ms, 2 frames over 50 ms per 5 sends —
+  slightly faster than the smoother droplet (p95 33.9 ms), because
+  there is no second element to paint and no delayed bounce. No new
+  animation loops, no per-frame JS listeners; WAAPI only.
+- **Tests.** `tests/native-motion-browser.mjs` now has two checks:
+  "own message morphs from the send button into a liquid-glass bubble"
+  (exactly one animation on `.message-main`, first keyframe carries
+  FLIP travel with `|dy| > 40` and `sx < .5`, glass `backdrop-filter`
+  is not `none`, bubble centre starts near the button, no
+  `.send-droplet` elements exist, settles at opacity 1 with 0
+  animations; gentle part asserts the `::after` backdrop-filter is
+  `none`; reduced part asserts no morphing classes and the message
+  still sends) and "keyboard-open send lands exactly where the
+  closed-keyboard send lands" (viewport shrunk to 520, send, restored
+  to 892 mid-morph; settled `|open.y − closed.y| < 8`, right edges
+  within 8 px, mid-flight centre never above resting centre − 5 and
+  below the button centre). Both pass. The mid-flight assert is read
+  in one atomic in-page snapshot: the morph is 300 ms and the glass
+  fade 170 ms, so a separate wait + read can land in the fade window
+  and see no running animation. The old droplet probe scripts
+  (`work/droplet-probe.mjs`, `work/send-bubble-check.mjs`) are stale —
+  they reference the removed droplet — and were left untouched. Two
+  Supabase RPC 404s in the fixture console
+  (`anniversary_2026_status`, `project28_config`) are pre-existing
+  noise, verified identical on the pristine checkout. Initial bundle
+  is 23.9 KiB gzip (24,454 bytes), still under the 25,000-byte budget.
 
 ## Chrome guidance follow-up (November 13, 2026)
 
