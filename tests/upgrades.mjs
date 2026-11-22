@@ -13,6 +13,10 @@ async function login(page){await page.goto(origin);await page.locator('#email').
 const c=await context({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const fixture=createFixture(60);await fixture.install(c);const page=await c.newPage();page.on('pageerror',e=>errors.push(e.message));
 try{
  await mkdir('work',{recursive:true});await login(page);
+ // Let the login view-swap settle: right after sign-in the old #sidebar is
+ // still in the DOM and gets replaced, so reading its computed styles too
+ // early catches the detached node (all styles read as '').
+ await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(250);
  await check('mobile menu casts no screen-sized shadow when closed',async()=>{
   const closed=await page.locator('#sidebar').evaluate(el=>({shadow:getComputedStyle(el).boxShadow,visibility:getComputedStyle(el).visibility,pointer:getComputedStyle(el).pointerEvents}));assert.equal(closed.shadow,'none');assert.equal(closed.visibility,'hidden');assert.equal(closed.pointer,'none');
   await page.getByRole('button',{name:'Open navigation'}).click();assert.notEqual(await page.locator('#sidebar').evaluate(el=>getComputedStyle(el).boxShadow),'none');
