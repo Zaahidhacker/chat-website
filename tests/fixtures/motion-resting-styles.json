@@ -1,5 +1,4 @@
 {
-  "commit": "974ffe8c4c02ef93488f8941bde273183f181f09",
   "viewport": {
     "width": 412,
     "height": 892
@@ -8,13 +7,13 @@
     {
       "selector": ".chat-header",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "14px",
         "letterSpacing": "normal",
         "lineHeight": "21px",
-        "color": "rgb(246, 241, 243)",
-        "backgroundColor": "rgb(21, 19, 21)",
+        "color": "rgb(255, 246, 251)",
+        "backgroundColor": "rgb(34, 25, 36)",
         "borderRadius": "0px",
         "paddingTop": "4px",
         "paddingRight": "16px",
@@ -30,12 +29,12 @@
     {
       "selector": "#partner-name",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
-        "fontWeight": "600",
+        "fontFamily": "Manrope, system-ui, sans-serif",
+        "fontWeight": "650",
         "fontSize": "16px",
-        "letterSpacing": "normal",
-        "lineHeight": "23.2px",
-        "color": "rgb(246, 241, 243)",
+        "letterSpacing": "-0.72px",
+        "lineHeight": "19.2px",
+        "color": "rgb(255, 246, 251)",
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "borderRadius": "0px",
         "paddingTop": "0px",
@@ -46,20 +45,20 @@
         "marginBottom": "0px",
         "textAlign": "start"
       },
-      "width": 71,
-      "height": 23
+      "width": 58.11,
+      "height": 22
     },
     {
       "selector": ".message.own .bubble",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "15px",
         "letterSpacing": "normal",
         "lineHeight": "24px",
-        "color": "rgb(53, 32, 42)",
-        "backgroundColor": "rgb(242, 184, 205)",
-        "borderRadius": "18px 18px 5px",
+        "color": "rgb(56, 32, 51)",
+        "backgroundColor": "rgb(250, 199, 225)",
+        "borderRadius": "13px 13px 3px",
         "paddingTop": "12px",
         "paddingRight": "15px",
         "paddingBottom": "12px",
@@ -74,14 +73,14 @@
     {
       "selector": ".message:not(.own) .bubble",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "15px",
         "letterSpacing": "normal",
         "lineHeight": "24px",
-        "color": "rgb(246, 241, 243)",
-        "backgroundColor": "rgb(39, 36, 39)",
-        "borderRadius": "18px 18px 18px 5px",
+        "color": "rgb(255, 246, 251)",
+        "backgroundColor": "rgb(55, 43, 57)",
+        "borderRadius": "13px 13px 13px 3px",
         "paddingTop": "12px",
         "paddingRight": "15px",
         "paddingBottom": "12px",
@@ -96,14 +95,14 @@
     {
       "selector": ".composer",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "14px",
         "letterSpacing": "normal",
         "lineHeight": "21px",
-        "color": "rgb(246, 241, 243)",
-        "backgroundColor": "rgb(34, 32, 34)",
-        "borderRadius": "24px",
+        "color": "rgb(255, 246, 251)",
+        "backgroundColor": "rgb(51, 38, 53)",
+        "borderRadius": "15px",
         "paddingTop": "6px",
         "paddingRight": "6px",
         "paddingBottom": "6px",
@@ -118,12 +117,12 @@
     {
       "selector": ".composer textarea",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "16px",
         "letterSpacing": "normal",
         "lineHeight": "24px",
-        "color": "rgb(246, 241, 243)",
+        "color": "rgb(255, 246, 251)",
         "backgroundColor": "rgba(0, 0, 0, 0)",
         "borderRadius": "12px",
         "paddingTop": "10px",
@@ -140,14 +139,14 @@
     {
       "selector": ".composer .send",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "14px",
         "letterSpacing": "normal",
         "lineHeight": "21px",
-        "color": "rgb(53, 32, 42)",
-        "backgroundColor": "rgb(242, 184, 205)",
-        "borderRadius": "50%",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgb(0, 74, 253)",
+        "borderRadius": "10px",
         "paddingTop": "1px",
         "paddingRight": "6px",
         "paddingBottom": "1px",
@@ -162,13 +161,13 @@
     {
       "selector": ".mobile-spaces",
       "styles": {
-        "fontFamily": "Poppins, system-ui, sans-serif",
+        "fontFamily": "Manrope, system-ui, sans-serif",
         "fontWeight": "400",
         "fontSize": "14px",
         "letterSpacing": "normal",
         "lineHeight": "21px",
-        "color": "rgb(246, 241, 243)",
-        "backgroundColor": "rgb(21, 19, 21)",
+        "color": "rgb(255, 246, 251)",
+        "backgroundColor": "rgb(34, 25, 36)",
         "borderRadius": "0px",
         "paddingTop": "5px",
         "paddingRight": "8px",
@@ -181,5 +180,6 @@
       "width": 412,
       "height": 64
     }
-  ]
+  ],
+  "design": "Correspondence redesign"
 }

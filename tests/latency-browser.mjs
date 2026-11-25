@@ -16,5 +16,30 @@ try{
  await check('catch-up paints text before a slow reaction lookup finishes',async()=>{fixture.pause(users[0].id);const m=fixture.add(users[1].id,'Catch up without waiting for reactions');fixture.pause(users[0].id,false);let requested=false;await a.route('**/rest/v1/universe_reactions?*',async route=>{requested=true;await new Promise(resolve=>setTimeout(resolve,3000));await route.fallback()});await a.evaluate(()=>window.dispatchEvent(new Event('online')));await until(()=>requested);await a.getByText(m.body,{exact:true}).waitFor({timeout:1500});await a.waitForTimeout(3500);await a.unroute('**/rest/v1/universe_reactions?*')});
  await check('a transient metadata outage recovers automatically without another browser event',async()=>{fixture.pause(users[0].id);const m=fixture.add(users[1].id,'Automatic recovery after an interruption');fixture.pause(users[0].id,false);let calls=0;await a.route('**/rest/v1/rpc/universe_sync_state',async route=>{if(++calls===1)await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'Temporary outage'})});else await route.fallback()});await a.evaluate(()=>window.dispatchEvent(new Event('online')));await a.getByText(m.body,{exact:true}).waitFor({timeout:6000});assert(calls>=2);await a.unroute('**/rest/v1/rpc/universe_sync_state')});
  await check('a late older-history response cannot move a newly sent message back into history mode',async()=>{let requested=false;await a.route('**/rest/v1/universe_messages?*',async route=>{if(new URL(route.request().url()).searchParams.getAll('seq').some(v=>v.startsWith('lt.'))){requested=true;await new Promise(resolve=>setTimeout(resolve,3000))}await route.fallback()});await a.getByRole('button',{name:'Earlier little moments ↑'}).click();await until(()=>requested);await a.locator('#message-input').fill('Stay in the latest conversation');await a.getByRole('button',{name:'Send message',exact:true}).click();await b.getByText('Stay in the latest conversation',{exact:true}).waitFor({timeout:1500});await a.waitForTimeout(3500);assert.equal(await a.getByRole('button',{name:'Back to our latest moments ↓'}).count(),0);await a.getByText('Stay in the latest conversation',{exact:true}).waitFor();await a.unroute('**/rest/v1/universe_messages?*')});
+ await check('long text arrives once with a compact server acknowledgement',async()=>{
+  const session=await a.context().newCDPSession(a);
+  await session.send('Network.enable');
+  await session.send('Network.emulateNetworkConditions',{offline:false,latency:700,downloadThroughput:4096,uploadThroughput:2048});
+  const body='A letter from the slow train. '.repeat(180).trim();
+  const response=a.waitForResponse(r=>new URL(r.url()).pathname.endsWith('/rpc/universe_send'));
+  await a.locator('#message-input').fill(body);
+  await a.getByRole('button',{name:'Send message',exact:true}).click();
+  const ack=await response;
+  assert.equal(JSON.parse(ack.request().postData()).reply,undefined);
+  const bytes=(await ack.body()).length;
+  assert(bytes<160);
+  await b.getByText(body,{exact:true}).waitFor();
+  const rows=fixture.messages.filter(m=>m.body===body);
+  assert.equal(rows.length,1);
+  console.log('Acknowledgement bytes: '+bytes+' (full row '+Buffer.byteLength(JSON.stringify(rows[0]))+')');
+ });
+ await check('data saver opens a shorter history and still pages through earlier messages',async()=>{
+  const phone=await client(0,390,()=>Object.defineProperty(navigator,'connection',{value:{saveData:true,effectiveType:'2g'}}));
+  await phone.locator('[data-message]').first().waitFor();
+  assert.equal(await phone.locator('[data-message]').count(),16);
+  await phone.getByRole('button',{name:'Earlier little moments ↑'}).click();
+  await phone.getByRole('button',{name:'Back to our latest moments ↓'}).waitFor();
+  assert.equal(await phone.locator('[data-message]').count(),32);
+ });
  assert.deepEqual(errors,[]);await writeFile('work/latency-report.json',JSON.stringify({passed:true,results,errors},null,2));
 }catch(error){console.error('FAILURE:',error);console.log('Presence diagnostic',await a.locator('#partner-status').innerText(),fixture.members.map(m=>({last_seen:m.last_seen,typing_until:m.typing_until}))); for(const c of contexts)for(const p of c.pages())if(!p.isClosed())console.log((await p.locator('body').innerText()).slice(-800));throw error}finally{await browser.close();server.close()}

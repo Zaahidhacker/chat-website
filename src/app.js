@@ -62,14 +62,14 @@ function connectionScreen(error){
  chatView?.enterPanel($('.reconnect'));
 }
 async function restoreSession(){
- $('#app').innerHTML='<main class="boot-screen" role="status"><span class="boot-mark" aria-hidden="true">✳︎</span>Opening your conversation…</main>';
+ if(!$('#boot'))$('#app').innerHTML='<main class="boot-screen" role="status"><span class="boot-mark" aria-hidden="true">✳︎</span>Opening your conversation…</main>';
  try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
  catch(error){if(isConnectionError(error))connectionScreen(error);else{login();$('#login-error').textContent=explainError(error)}}
 }
 const renderSignatures=new WeakMap(),receiptTimes=new WeakMap();
 const clockFormat=new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit'});
 const dayFormat=new Intl.DateTimeFormat(undefined,{month:'long',day:'numeric',year:'numeric'});
-const PAGE_SIZE=50,WINDOW_SIZE=matchMedia("(max-width:700px)").matches?100:200;
+const WINDOW_SIZE=matchMedia("(max-width:700px)").matches?100:200;
 
 function setTheme(t) {
   theme = t;
@@ -222,7 +222,7 @@ async function enter(session,welcome=false){
    const api=await photos(),rows=await api.loadDrafts(S.user.id);if(epoch!==sessionEpoch)return;
    for(const row of rows){if(!S.messages.some(m=>m.id===row.message.id))S.messages.push({...row.message,pending:false,failed:true,transmitting:false});photoRecords.set(row.message.id,{id:row.message.id,width:row.photo.width,height:row.photo.height});api.localThumb(row.message.id,row.photo.thumb)}
   }
-  S.loading=false;S.dataOnline=true;render();scrollBottom();startRealtime();chatView.project28(db,S,receipt);setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
+  S.loading=false;S.dataOnline=true;updateMessages(true);startRealtime();chatView.project28(db,S,receipt);setNotificationAccount(S.user.id);try{if(localStorage.getItem('universe-location-stop-'+S.user.id))import('./location.js').then(async module=>{if(epoch===sessionEpoch){locationAPI=module;await module.configure(db,{user:S.user,me:S.me,partner:S.partner,demo:false});module.controls($('#location-controls'))}}).catch(()=>{})}catch{}
  }catch(error){
   if(epoch!==sessionEpoch)return;
   S.loading=false;
@@ -241,13 +241,17 @@ function applyMetadata(state){
 }
 async function loadMessages(before){
  const epoch=sessionEpoch,request=++historyRequest;
- let q=db.from('universe_messages').select('*').gt('seq',S.cutoff).order('seq',{ascending:false}).limit(PAGE_SIZE);
+ const connection=navigator.connection;
+ const constrained=connection?.saveData||['slow-2g','2g'].includes(connection?.effectiveType);
+ const pageSize=constrained?16:50;
+ let q=db.from('universe_messages').select('*').gt('seq',S.cutoff).order('seq',{ascending:false}).limit(pageSize);
  if(before)q=q.lt('seq',before);
  const {data,error}=await q;if(epoch!==sessionEpoch||request!==historyRequest)return;if(error)throw error;
- S.hasMore=data.length===PAGE_SIZE;if(data.length)S.oldestSeq=Math.min(...data.map(m=>m.seq));
+ S.hasMore=data.length===pageSize;if(data.length)S.oldestSeq=Math.min(...data.map(m=>m.seq));
  S.older=!!before;
  S.messages=boundMessages(mergeMessages(S.messages,data),{limit:WINDOW_SIZE,older:S.older,favorites:new Set()});
  S.latestSeq=Math.max(S.latestSeq||0,...data.map(m=>m.seq));
+ if(S.loading && !before){S.loading=false;updateMessages(true)}
  await Promise.all([loadReactions(),loadReplyContext(data,epoch),loadPhotos(data,epoch)]);
  receipt();
  async function loadReactions(){
@@ -459,7 +463,7 @@ function logItems(){
  for(const r of S.reactions){const list=reactionLookup.get(r.message_id)||[];list.push(r);reactionLookup.set(r.message_id,list)}
  const items=[];
  const add=(key,html)=>items.push({key,signature:html,html:()=>html});
- if(S.loading){add('skeleton-1','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:72%"></div><div class="skeleton-line" style="width:48%"></div></div>');add('skeleton-2','<div class="chat-skeleton own" aria-hidden="true"><div class="skeleton-line" style="width:64%"></div><div class="skeleton-line" style="width:38%"></div></div>');add('skeleton-3','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:58%"></div></div>');add('skeleton-status','<div class="page-skeleton" role="status"><span>Opening your conversation…</span></div>');return items}
+ if(S.loading&&!ms.length){add('skeleton-1','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:72%"></div><div class="skeleton-line" style="width:48%"></div></div>');add('skeleton-2','<div class="chat-skeleton own" aria-hidden="true"><div class="skeleton-line" style="width:64%"></div><div class="skeleton-line" style="width:38%"></div></div>');add('skeleton-3','<div class="chat-skeleton" aria-hidden="true"><div class="skeleton-line" style="width:58%"></div></div>');add('skeleton-status','<div class="page-skeleton" role="status"><span>Opening your conversation…</span></div>');return items}
  if(!ms.length){add('empty-'+S.cutoff,`<div class="welcome-moment" style="margin-top:70px"><span class="mini-heart">${icon('heart')}</span><h2>${S.cutoff?'A fresh little page.':'Our story starts here.'}</h2><p>${S.cutoff?'Your view is clear. Your partner’s memories are still theirs.':'No grand words needed. A little hello is a lovely beginning.'}</p></div>`);return items}
  if(S.hasMore)add('older','<button class="more-btn" data-action="older">Earlier little moments ↑</button>');
  if(!S.hasMore&&!S.cutoff)add('welcome',`<div class="welcome-moment"><span class="mini-heart">${icon('heart')}</span><h2>A little world, with you in it.</h2><p>For the big feelings and the tiny details.<br>There’s a place for all of them here.</p></div>`);
@@ -991,10 +995,9 @@ window.addEventListener('online',()=>{if(S.user&&!S.demo){if(!channel)startRealt
 window.addEventListener('offline',updateStatus);
 window.addEventListener('pagehide',flushStash);
 window.addEventListener('pageshow',event=>{if(event.persisted&&S.user&&!S.demo){stop(true);startRealtime();refresh()}});
-login();
 // The public login and sample don't download or initialize the messaging SDK.
 let hasSavedSession=false;for(const name of ['localStorage','sessionStorage'])try{hasSavedSession||=!!window[name].getItem(AUTH_STORAGE_KEY)}catch{}
-if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();
+if(hasSavedSession||location.hash.includes('access_token')||new URLSearchParams(location.search).has('code'))restoreSession();else login();
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').then(reg=>{
  const activate=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='installed')worker.postMessage('SKIP_WAITING')});reg.waiting?.postMessage('SKIP_WAITING')};activate();reg.addEventListener('updatefound',activate);
 }).catch(()=>{});

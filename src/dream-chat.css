@@ -46,6 +46,13 @@ body.light:has(.app-layout),.light .app-layout{--bg:#fffbfd;--side:#f8e7f0;--pan
 .app-layout .chat-header>.avatar{background:var(--rose);color:#752a55;border-radius:10px}.chat-header h1{font:650 19px/1.2 var(--sans);letter-spacing:-.045em}.app-layout .welcome-moment h2,.content-page .world-hero h2,.content-page>h2{font:500 clamp(30px,3vw,47px)/1.05 var(--serif);letter-spacing:-.04em}.welcome-moment .mini-heart{color:var(--accent)}
 .app-layout .own .bubble{color:#382033;border-radius:13px 13px 3px 13px}.app-layout .bubble{border-radius:13px 13px 13px 3px;font-size:15px}.app-layout .composer{border-radius:15px}.app-layout .composer .send,.modal .primary,.content-page .primary{background:var(--cobalt);color:white}.app-layout .composer .send{border-radius:10px}.app-layout .composer textarea{font-size:16px}
 .content-page .settings-card,.content-page .world-doors button{border-radius:8px;border:1px solid var(--line)}.content-page .switch.on{background:var(--cobalt)}.modal h2{font:500 32px/1.1 var(--serif)}.modal{border-radius:16px}.app-layout .day{letter-spacing:.06em;text-transform:uppercase;font-weight:700}
-.page-skeleton{padding:clamp(24px,6vw,80px);color:var(--muted)}.page-skeleton:before{color:var(--accent);margin-bottom:12px}.page-skeleton:after{display:block;content:"";width:min(90%,28rem);height:5rem;margin-top:18px;background:linear-gradient(var(--line),var(--line)) left top/75% 8px,linear-gradient(var(--line),var(--line)) left 24px/100% 8px,linear-gradient(var(--line),var(--line)) left 48px/56% 8px;background-repeat:no-repeat}
+.page-skeleton{padding:clamp(24px,6vw,80px);color:var(--muted)}.page-skeleton:before{color:var(--accent);margin-bottom:12px}
 @media(min-width:1001px){.app-layout{grid-template-columns:262px minmax(0,1fr)}.sidebar{padding-inline:20px}.chat-header{height:76px;min-height:76px}.app-layout .messages{padding-inline:max(40px,calc((100% - 800px)/2))}}
 @media(max-width:700px){.mobile-spaces button[aria-current=page]{color:var(--accent)}.app-layout .chat-header h1{font-size:16px}}
+.app-layout :is(.garden-heading,.places-heading,.island-top){padding-bottom:16px;border-bottom:1px solid var(--line)}
+.app-layout :is(.garden-heading,.places-heading,.island-top) h2{font:500 clamp(32px,4vw,52px)/1.06 var(--serif);letter-spacing:-.045em}
+.app-layout .garden-scene,.app-layout .garden-card,.app-layout .place-sharing,.app-layout .island-journal-intro{border-radius:10px}
+.app-layout :is(.garden-tab.selected,.island-tabs button[aria-selected=true]){background:var(--rose);color:#472337}
+.app-layout .side-card{overflow:hidden}.app-layout .side-card:before{display:block;content:"";height:48px;margin:-16px -16px 14px;background:#fac7e1 url('/moon-post.webp') center 60%/cover;position:static;width:auto;opacity:1;transform:none;border:0;border-radius:0}
+.app-layout .side-card:after{display:none}
+@media(max-height:670px){.app-layout .side-card:before{display:none}}

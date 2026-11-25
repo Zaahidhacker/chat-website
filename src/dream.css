@@ -22,3 +22,5 @@
 .boot-screen{display:grid;align-content:center;justify-items:center;gap:18px;min-height:100svh;color:var(--ink);background:var(--rose);font:600 19px var(--sans)}
 .boot-mark,.page-skeleton:before{display:block;content:"✳︎";font:52px/1 Georgia;color:var(--cobalt);animation:post-arrives 1.2s ease-in-out infinite alternate}@keyframes post-arrives{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:translateY(-2px)}}
 @media(prefers-reduced-motion:reduce){.post-login *,.boot-mark,.page-skeleton:before{animation:none!important;transition:none!important}}
+.post-mark,.bloom-mark,.boot-mark{font-variant-emoji:text}
+@media(prefers-reduced-data:reduce){.post-print{display:none}}
