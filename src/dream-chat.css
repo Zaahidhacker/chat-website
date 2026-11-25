@@ -56,3 +56,11 @@ body.light:has(.app-layout),.light .app-layout{--bg:#fffbfd;--side:#f8e7f0;--pan
 .app-layout .side-card{overflow:hidden}.app-layout .side-card:before{display:block;content:"";height:48px;margin:-16px -16px 14px;background:#fac7e1 url('/moon-post.webp') center 60%/cover;position:static;width:auto;opacity:1;transform:none;border:0;border-radius:0}
 .app-layout .side-card:after{display:none}
 @media(max-height:670px){.app-layout .side-card:before{display:none}}
+
+.sidebar .bloom-mark{background:transparent url('/icon.svg') center/contain no-repeat;font-size:0}
+.app-layout .composer .send[data-has-text]{background:var(--cobalt);color:white}
+@media(max-width:700px){
+ .app-layout .mobile-milestone{background:var(--rose);color:#582c43;justify-content:space-between;padding-inline:16px}
+ .app-layout .mobile-milestone span:first-child{display:inline;color:#582c43;font-weight:700}
+ .app-layout .mobile-milestone [data-relationship-days]{color:#582c43}
+}

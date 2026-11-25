@@ -24,3 +24,5 @@
 @media(prefers-reduced-motion:reduce){.post-login *,.boot-mark,.page-skeleton:before{animation:none!important;transition:none!important}}
 .post-mark,.bloom-mark,.boot-mark{font-variant-emoji:text}
 @media(prefers-reduced-data:reduce){.post-print{display:none}}
+
+.post-mast .post-mark{display:block;width:34px;height:34px;background:url('/icon.svg') center/contain no-repeat;font-size:0}
