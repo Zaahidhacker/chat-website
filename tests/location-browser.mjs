@@ -8,7 +8,14 @@ async function until(fn){for(let i=0;i<500;i++){if(await fn())return;await new P
 async function check(name,fn){await fn();results.push({name,status:'passed'});console.log('PASS '+name)}
 async function login(p,u){await p.goto(origin);await p.locator('#email').fill(u.email);await p.locator('#password').fill('test-password-only');await p.getByRole('button',{name:'Enter our universe',exact:true}).click();await p.locator('#message-input').waitFor()}
 async function open(p){if(await p.getByRole('button',{name:'Open navigation'}).isVisible())await p.getByRole('button',{name:'Open navigation'}).click();await p.locator('[data-action="page-location"]').click();await p.getByRole('button',{name:'Start sharing my location',exact:true}).waitFor()}
-async function start(p,u){await p.getByRole('button',{name:'Start sharing my location',exact:true}).click();await until(()=>Number.isFinite(locations.rows.get(u.id)?.latitude));}
+async function start(p,u){
+ const previous=locations.rows.get(u.id)?.session_id;
+ await p.getByRole('button',{name:'Start sharing my location',exact:true}).click();
+ await until(()=>{
+  const row=locations.rows.get(u.id);
+  return row?.session_id!==previous && row?.mode==='active' && Number.isFinite(row.latitude);
+ });
+}
 try{await mkdir('work',{recursive:true});await Promise.all([login(a,users[0]),login(b,users[1])]);
  await check('locations are off by default and opening the page asks for neither GPS nor map tiles',async()=>{assert.equal(locations.calls.length,0);await Promise.all([open(a),open(b)]);assert.equal(await a.evaluate(()=>geoCalls),0);assert.equal(await b.evaluate(()=>geoCalls),0);assert.equal(tiles.length,0);assert.equal(locations.rows.size,0)});
  await check('each account opts in separately and the partner receives precise test coordinates automatically',async()=>{await start(a,users[0]);assert.equal(locations.rows.get(users[0].id).latitude,6.9);assert.equal(locations.rows.get(users[1].id),undefined);await b.getByText('6.90000, 79.80000',{exact:true}).waitFor();await start(b,users[1]);await a.getByText('6.90100, 79.80200',{exact:true}).waitFor();await b.getByText('accuracy ±10 m',{exact:false}).waitFor()});
