@@ -9,3 +9,4 @@
 @starting-style{.post-login [data-purpose=hero-narrative]{opacity:.6;transform:translateY(8px)}}
 .post-login [data-purpose=hero-narrative]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 @media(prefers-reduced-motion:reduce){.post-login [data-purpose=auth-card-container],.post-login [data-purpose=hero-narrative],.post-login button{transition:none}.post-login button:active{scale:1}}
+.quiet-sky .post-login .floating-badge { animation-play-state: paused; }
