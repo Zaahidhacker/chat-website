@@ -66,7 +66,9 @@ export function createFixture(seed=350,{sessionSeconds=3600,presenceStateFirst=f
    else if(path.endsWith('/rpc/universe_garden_state'))data=gardenState(uid);
    else if(path.endsWith('/rpc/universe_garden_act')){const points={feed:3,water:3,question:5,pairs:4,code:4,moon:1};const key=uid+':'+body.activity;if(points[body.activity]&&!gardenEvents.has(key))gardenEvents.set(key,{user_id:uid,kind:body.activity,points:points[body.activity]});if(body.activity==='question'&&!gardenAnswers.has(uid))gardenAnswers.set(uid,{user_id:uid,day:day(),answer:body.note});data=gardenState(uid)}
    else if(path.endsWith('/rpc/universe_send')){
-    data=add(uid,body.content,body.mid,body.reply);if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Test: acknowledgement lost after commit'}}
+    data=add(uid,body.content,body.mid,body.reply);
+    const columns=url.searchParams.get('select');if(columns)data=Object.fromEntries(columns.split(',').map(key=>[key,data[key]]));
+    if(loseNextResponse){loseNextResponse=false;status=503;data={message:'Test: acknowledgement lost after commit'}}
    }else if(path.endsWith('/rpc/universe_change')){
     const m=messages.find(m=>m.id===body.mid&&m.sender===uid);if(!m){status=403;data={message:'Not your message'}}else{m.body=body.content||'';m.deleted=body.content===null;m.edited_at=new Date().toISOString();m.revision=++revision;event('universe_messages','UPDATE',m)}
    }else if(path.endsWith('/rpc/universe_receipt')){

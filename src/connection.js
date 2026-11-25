@@ -11,7 +11,7 @@ export function explainError(error) {
 export async function resilientFetch(input, init) {
  const url = String(input instanceof Request ? input.url : input);
  const method = (init?.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
- const safe = !url.includes('/auth/') && (method === 'GET' || /\/rpc\/universe_(sync_state|receipt|send)$/.test(url));
+ const safe = !url.includes('/auth/') && (method === 'GET' || /\/rpc\/universe_(sync_state|receipt|send)(?:\?|$)/.test(url));
  for (let attempt = 0; ; attempt++) {
   const controller=new AbortController(),source=init?.signal||(input instanceof Request?input.signal:null);
   const abort=()=>controller.abort(source.reason);

@@ -1,7 +1,4 @@
 import {build,transform} from 'esbuild';
-import postcss from 'postcss';
-import tailwind from 'tailwindcss';
-import tailwindConfig from './tailwind.config.cjs';
 import {readFile,writeFile,copyFile,mkdir,rm} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {gzipSync,brotliCompressSync} from 'node:zlib';
@@ -20,8 +17,7 @@ const workerURL=`/assets/photo-worker-${workerHash}.js`;await writeFile('dist'+w
 const result=await build({entryPoints:['src/app.js'],bundle:true,minify:true,splitting:true,format:'esm',outdir:'dist/assets',entryNames:'[name]-[hash]',chunkNames:'[name]-[hash]',target:['es2020'],metafile:true,legalComments:'none',define:{...featureDefines,PHOTO_WORKER_URL:JSON.stringify(workerURL)}});
 const entry=Object.entries(result.metafile.outputs).find(([,v])=>v.entryPoint==='src/app.js')[0].replace(/^dist/,'');
 let cssSource=await readFile('src/style.css','utf8')+await readFile('src/overhaul.css','utf8');
-const utilities=await postcss([tailwind(tailwindConfig)]).process(await readFile('src/reference-utilities.css','utf8'),{from:'src/reference-utilities.css'});
-cssSource+=utilities.css+await readFile('src/reference-motion.css','utf8')+await readFile('src/dream.css','utf8')+await readFile('src/motion-tokens.css','utf8');
+cssSource+=await readFile('src/dream.css','utf8')+await readFile('src/motion-tokens.css','utf8');
 for(const [name,file]of [['poppins','node_modules/@fontsource/poppins/files/poppins-latin-400-normal.woff2'],['poppins-semibold','node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2'],['caveat','node_modules/@fontsource/caveat/files/caveat-latin-400-normal.woff2'],['manrope','node_modules/@fontsource-variable/manrope/files/manrope-latin-wght-normal.woff2'],['cormorant','node_modules/@fontsource/cormorant-garamond/files/cormorant-garamond-latin-500-normal.woff2']]){
  const bytes=await readFile(file),version=createHash('sha256').update(bytes).digest('hex').slice(0,12);
  const url=`/assets/${name}-${version}.woff2`;await writeFile('dist'+url,bytes);
@@ -31,7 +27,7 @@ const css=(await transform(cssSource,{loader:'css',minify:true,target:'es2020'})
 const hash=createHash('sha256').update(css).digest('hex').slice(0,12);
 const cssURL=`/assets/style-${hash}.css`;await writeFile('dist'+cssURL,css);
 let html=await readFile('src/index.html','utf8');html=html.replace('<!--LOGIN_TEMPLATE-->',`<template id="login-template">${await readFile('src/login-template.html','utf8')}</template>`);html=html.replace('/app.js',entry).replace('/style.css',cssURL);await writeFile('dist/index.html',html);
-for(const f of ['icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
+for(const f of ['moon-post.webp','icon.svg','icon-192.png','icon-512.png','manifest.webmanifest'])await copyFile('src/'+f,'dist/'+f);
 await copyFile('node_modules/motion/LICENSE.md','dist/motion-LICENSE.txt');
 await copyFile('node_modules/@fontsource/allura/LICENSE','dist/allura-LICENSE.txt');
 for(const name of ['poppins','caveat'])await copyFile(`node_modules/@fontsource/${name}/LICENSE`,`dist/${name}-LICENSE.txt`);

@@ -62,6 +62,7 @@ function connectionScreen(error){
  chatView?.enterPanel($('.reconnect'));
 }
 async function restoreSession(){
+ $('#app').innerHTML='<main class="boot-screen" role="status"><span class="boot-mark" aria-hidden="true">✳︎</span>Opening your conversation…</main>';
  try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
  catch(error){if(isConnectionError(error))connectionScreen(error);else{login();$('#login-error').textContent=explainError(error)}}
 }
@@ -74,7 +75,7 @@ function setTheme(t) {
   theme = t;
   document.body.classList.toggle("light", t === "light");
   try{localStorage.setItem("universe-theme", t)}catch{}
-  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#f8f5f3" : "#101011";
+  document.querySelector('meta[name="theme-color"]').content = t === "light" ? "#fffbfd" : "#221924";
 }
 setTheme(theme);
 try{
@@ -165,7 +166,7 @@ async function signIn(e) {
   let btn = $("button[type=submit]", e.target);
   btn.disabled = true;
   btn.setAttribute("aria-label", "Entering our universe");
-  btn.innerHTML = '<span class="spinner"></span>';
+  btn.textContent = inviteMode ? 'Creating your account…' : 'Signing in…';
   $("#login-error").textContent = "";
   try {
     rememberWorld=$('#remember-world')?.checked!==false;
@@ -247,15 +248,16 @@ async function loadMessages(before){
  S.older=!!before;
  S.messages=boundMessages(mergeMessages(S.messages,data),{limit:WINDOW_SIZE,older:S.older,favorites:new Set()});
  S.latestSeq=Math.max(S.latestSeq||0,...data.map(m=>m.seq));
- if(data.length){
+ await Promise.all([loadReactions(),loadReplyContext(data,epoch),loadPhotos(data,epoch)]);
+ receipt();
+ async function loadReactions(){
+  if(!data.length)return;
   const ids=data.map(m=>m.id);
   const r=await db.from('universe_reactions').select('*').in('message_id',ids);
-  if(epoch!==sessionEpoch)return;if(r.error)throw r.error;
+  if(epoch!==sessionEpoch||request!==historyRequest)return;if(r.error)throw r.error;
   const set=new Set(ids);S.reactions=S.reactions.filter(r=>!set.has(r.message_id)).concat(r.data);
  }
- await loadReplyContext(data,epoch);
- await loadPhotos(data,epoch);
- receipt();
+
 }
 async function loadReplyContext(messages,epoch){
  const known=new Set([...S.messages.map(m=>m.id),...replyContext.keys()]);
@@ -568,11 +570,11 @@ async function send() {
   S.reply = null;
   $("#reply-container").innerHTML = "";
   updateMessages(true);
-  const sending=transmit(m);
+  const sending=transmit(m,true);
   if(wasOlder)showLatest().catch(()=>{if(epoch===sessionEpoch)toast('Your message is sending. Earlier messages will reload when the connection recovers.')});
   await sending;
 }
-async function transmit(m) {
+async function transmit(m,firstSend=false) {
   if(m.pending&&m.transmitting)return;
   m.transmitting=true;
   m.failed = false;
@@ -594,9 +596,22 @@ async function transmit(m) {
      if(epoch!==sessionEpoch)return;
      photoRecords.set(m.id,result.photo);applyIncoming([{...result.message,photoPending:false,transmitting:false}]);await api.removeDraft(S.user.id,m.id);if(!(await api.loadDrafts(S.user.id)).length){try{localStorage.removeItem('universe-photo-pending-'+S.user.id)}catch{}}stash();updateMessages(true);return;
     }
-    const { data, error } = await db.rpc("universe_send", { mid: m.id, content: m.body, reply: m.reply_to });
+    const args={mid:m.id,content:m.body};
+    if(m.reply_to)args.reply=m.reply_to;
+    const request=db.rpc("universe_send",args);
+    // First sends already hold the immutable draft. Retries need the full canonical row.
+    const compact=firstSend && m.body.length>128;
+    const {data:result,error}=await (compact?request.select('seq,revision,created_at,edited_at,deleted'):request);
     if(epoch!==sessionEpoch)return;
     if (error) throw error;
+    const ack=Array.isArray(result)?result[0]:result;
+    let data=compact?{...m,...ack}:ack;
+    if(compact && (ack.edited_at||ack.deleted)){
+      const canonical=await db.from('universe_messages').select('*').eq('id',m.id).single();
+      if(epoch!==sessionEpoch)return;
+      if(canonical.error)throw canonical.error;
+      data=canonical.data;
+    }
     applyIncoming([{...data,transmitting:false}]);chatView.secretMessage(data,S.user.id);
     stash();
     updateMessages(true);
@@ -832,6 +847,7 @@ async function action(a, el) {
   if (a === "older") {
     if (loadingOlder) return;
     loadingOlder = true;
+    el.disabled=true;el.textContent="Loading earlier messages…";
     const view = $("#messages"), height = view.scrollHeight, top = view.scrollTop;const anchor=[...view.querySelectorAll("[data-message]")].find(e=>e.getBoundingClientRect().bottom>view.getBoundingClientRect().top),anchorId=anchor?.dataset.message,anchorTop=anchor?.getBoundingClientRect().top;
     try {
       await loadMessages(Math.min(...S.messages.filter((m2) => !m2.pending && !m2.failed).map((m2) => m2.seq)));
@@ -841,7 +857,7 @@ async function action(a, el) {
     } catch {
       toast("Couldn\u2019t load earlier messages. Try again.");
     } finally {
-      loadingOlder = false;
+      loadingOlder = false;el.disabled=false;el.textContent="Earlier little moments ↑";
     }
     return;
   }

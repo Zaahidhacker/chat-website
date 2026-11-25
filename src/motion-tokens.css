@@ -1,11 +1,11 @@
 :root{--motion-press:110ms;--motion-micro:140ms;--motion-panel:220ms;--motion-nav:260ms;--motion-ease:cubic-bezier(.22,1,.36,1)}
-.dream-login button{transition:scale var(--motion-press) var(--motion-ease),background-color var(--motion-micro) ease}
-.dream-login button:not(:disabled):active{transform:none;scale:.97}
-@starting-style{.dream-login [data-purpose=auth-card-container]{opacity:.6;transform:translateY(6px)}}
-.dream-login [data-purpose=auth-card-container]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+.post-login button{transition:scale var(--motion-press) var(--motion-ease),background-color var(--motion-micro) ease}
+.post-login button:not(:disabled):active{transform:none;scale:.97}
+@starting-style{.post-login [data-purpose=auth-card-container]{opacity:.6;transform:translateY(6px)}}
+.post-login [data-purpose=auth-card-container]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
 /* Post-sign-in motion lives in the lazy interactions bundle (native-motion.css),
    so the cold login stays inside its 25 KB gzip budget. */
 [data-motion=lite] :is(.orbit-ellipse-1,.orbit-ellipse-2,.floating-badge,.floating-badge-delayed,.planet-glow,[class*=star-twinkle]){animation:none}
-@starting-style{.dream-login [data-purpose=hero-narrative]{opacity:.6;transform:translateY(8px)}}
-.dream-login [data-purpose=hero-narrative]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
-@media(prefers-reduced-motion:reduce){.dream-login [data-purpose=auth-card-container],.dream-login [data-purpose=hero-narrative],.dream-login button{transition:none}.dream-login button:active{scale:1}}
+@starting-style{.post-login [data-purpose=hero-narrative]{opacity:.6;transform:translateY(8px)}}
+.post-login [data-purpose=hero-narrative]{transition:opacity var(--motion-panel) ease,transform var(--motion-panel) var(--motion-ease)}
+@media(prefers-reduced-motion:reduce){.post-login [data-purpose=auth-card-container],.post-login [data-purpose=hero-narrative],.post-login button{transition:none}.post-login button:active{scale:1}}
