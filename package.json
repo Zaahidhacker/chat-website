@@ -29,7 +29,8 @@
     "test:interactions": "node tests/interactions-browser.mjs",
     "test:anniversary": "node tests/anniversary-browser.mjs",
     "test:taste": "node tests/taste-ui-browser.mjs",
-    "test:motion": "node tests/native-motion-browser.mjs"
+    "test:motion": "node tests/native-motion-browser.mjs",
+    "test:chapter-two": "node tests/chapter-two-browser.mjs"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "5.3.0",

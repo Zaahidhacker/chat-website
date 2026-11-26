@@ -3,6 +3,7 @@ export {bindViewport,pinViewport,unbindViewport} from './chat-viewport.js';
 export {enterMessage,enterPanel,exitPanel,exitOverlay,clearMotion,sendPulse} from './motion-system.js';
 export {attachSwipeReply} from './swipe.js';
 export {fitComposer,observeComposer} from './composer-layout.js';
+import {closeNavigation} from './navigation.js';
 export {toggleNavigation,closeNavigation} from './navigation.js';
 export {createPresence} from './live-presence.js';
 export {paths} from './icons.js';
@@ -12,9 +13,11 @@ export {searchHTML,dialogFocusables,prepareDialog} from './conversation-search.j
 
 // Cached, signed-in motion polish keeps the cold login within its 25 KB budget.
 const interactionStyle=document.createElement('link');interactionStyle.rel='stylesheet';interactionStyle.href=INTERACTIONS_STYLE_URL;export const ready=new Promise((resolve,reject)=>{interactionStyle.onload=resolve;interactionStyle.onerror=()=>reject(Error('Could not load the chat design. Please try again.'))});document.head.append(interactionStyle);
-import {anniversaryGate,stopAnniversary} from './anniversary-gate.js';
+import {anniversaryGate,stopAnniversary,openChapterOne} from './anniversary-gate.js';
+import {startChapterTwo,stopChapterTwo} from './chapter-two-gate.js';
+export const chapterTwo = (db,S,onReturn) => startChapterTwo(db,S,onReturn,openChapterOne,closeNavigation);
 let p28Module,p28Ticket=0;
-export function stopProject28(){p28Ticket++;stopAnniversary();p28Module?.stopProject28()}
+export function stopProject28(){p28Ticket++;stopChapterTwo();stopAnniversary();p28Module?.stopProject28()}
 export async function project28(db,S,onReturn){const ticket=++p28Ticket;anniversaryGate(db,S,onReturn).catch(()=>{});try{const r=await db.from('project28_config').select('*').eq('id',true);if(r.error||!r.data?.[0]||ticket!==p28Ticket)return;const module=await import('./project28.js');if(ticket!==p28Ticket)return;p28Module=module;module.project28(db,S,onReturn,r.data[0])}catch{}}
 export {secretMessage,closeSecret} from './heart-secret.js';
 export {presenceLabel} from './presence.js';

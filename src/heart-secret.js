@@ -13,4 +13,4 @@ export function secretMessage(message,user){
  }).catch(()=>{});
 }
 
-if(typeof document!=='undefined'){document.addEventListener('anniversary-open',closeSecret);document.addEventListener('p28-open',closeSecret)}
+if(typeof document!=='undefined'){document.addEventListener('anniversary-open',closeSecret);document.addEventListener('chapter-two-open',closeSecret);document.addEventListener('p28-open',closeSecret)}

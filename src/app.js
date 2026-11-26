@@ -57,11 +57,13 @@ function photoHTML(m){
 }
 function setNotificationAccount(userId){navigator.serviceWorker?.ready.then(r=>r.active?.postMessage({type:'ACCOUNT',userId})).catch(()=>{})}
 function connectionScreen(error){
+ document.body.classList.remove('resolving-session');
  hideBoot();
  $('#app').innerHTML=`<main class="reconnect"><div class="brand">${logo()}<strong>Our Little Universe</strong></div><h1>A moment to reconnect.</h1><p role="status">${esc(explainError(error))}</p><button class="primary" data-action="retry-session">Try again ${icon('arrow')}</button><button class="text-btn" data-action="logout">Sign out of this device</button></main>`;
  chatView?.enterPanel($('.reconnect'));
 }
 async function restoreSession(){
+ document.body.classList.add('resolving-session');
  if(!$('#boot'))$('#app').innerHTML='<main class="boot-screen" role="status"><span class="boot-mark" aria-hidden="true">✳︎</span>Opening your conversation…</main>';
  try{await ensureClient();const {data,error}=await db.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else login()}
  catch(error){if(isConnectionError(error))connectionScreen(error);else{login();$('#login-error').textContent=explainError(error)}}
@@ -109,6 +111,7 @@ function closeModal(animate=true) {
 function time(t){return clockFormat.format(new Date(t))}
 function date(t){const d=new Date(t);return d.toDateString()===new Date().toDateString()?'Today':dayFormat.format(d)}
 function login() {
+  document.body.classList.remove('resolving-session');
   hideBoot();
   stop();
   S.user = null;
@@ -203,6 +206,7 @@ async function sample() {
 }
 async function enter(session,welcome=false){
  if(!session){login();return}
+ document.body.classList.add('resolving-session');
  resumeSession={session,welcome};
  const epoch=++sessionEpoch;refreshing=false;refreshQueued=false;stop();
  S.demo=false;S.user=session.user;S.loading=true;
@@ -214,7 +218,9 @@ async function enter(session,welcome=false){
   if(!state?.preferences)throw Error('This account has not joined yet. Use your private invitation to set up your account.');
   applyMetadata(state);S.unreadBoundary=S.me?.last_read||0;syncCursor=state.revision||0;setTheme(state.preferences.theme);S.page='chat';
   restoreOutbox();
-  if(welcome)chatView.welcomeBack(S.me);
+  await chatView.chapterTwo(db,S,receipt);if(epoch!==sessionEpoch)return;
+  document.body.classList.remove('resolving-session');
+  if(welcome&&!S.chapterTwoActive&&!document.querySelector('[data-chapter-cover]'))chatView.welcomeBack(S.me);
   render(); // First paint only once the partner and the restored draft are known, so the header never flashes "Your person" and the composer never flashes empty; the skeleton covers message loading below.
   await loadMessages();if(epoch!==sessionEpoch)return;
   let pendingPhotos=false;try{pendingPhotos=!!localStorage.getItem('universe-photo-pending-'+S.user.id)}catch{}
